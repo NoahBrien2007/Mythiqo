@@ -1,0 +1,69 @@
+:root {
+    --bg-primary: #2929b5;
+    --bg-secondary: #a2a2a5;
+    --bg-tertiary: #6b6b88;
+    --text-color: white;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    margin: 0;
+    height: 100vh;
+}
+
+.logo {
+    width: 100%;
+    height: auto;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 50vw;
+    margin-top: 30vh;
+}
+
+.button-row {
+    width: 99%;
+}
+
+.btn {
+    background: var(--bg-secondary);
+    color: var(--text-color);
+}
+
+.text-input {
+    padding: 0px;
+    border: none;
+    background: transparent;
+    flex: 1;
+}
+
+.button-row {
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    flex: 1;
+    padding: 5px 20px;
+    text-align: center;
+    text-decoration: none;
+    outline: 2px solid var(--bg-primary);
+}
+
+.search-box{
+    display: flex;
+    width: 99%;
+    background: var(--bg-tertiary);
+    outline: 2px solid var(--bg-primary);
+}
+
+.search-icon {
+    width: 5%;
+    height: auto;
+}
