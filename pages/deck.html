@@ -11,12 +11,11 @@
 
     <div class="topbar">
         <div class="search-box">
-            <div class="search-icon"></div>
-            <input type="text" class="text-input" placeholder="Search...">
+            <div class="search-icon" id="topbar-search-trigger"></div>
+            <input type="text" id="topbar-search-input" class="text-input" placeholder="Search...">
         </div>
-        <button class="btn">FILTERS</button>
+        <button class="btn" onclick="window.location.href='search.html'">FILTERS</button>
         <button class="btn active">DECKS</button>
-        <button class="btn">SIMULATE</button>
     </div>
 
     <div class="view-container">
@@ -29,7 +28,7 @@
             <div class="deck-sidebar">
                 <div class="deck-sidebar-header">
                     <button class="btn-back" id="btn-back-hub">&#8592;</button>
-                    <div style="display:inline-block;">
+                    <div style="display:inline-block; vertical-align: middle;">
                         <h2 class="detail-deck-name" id="detail-deck-name"></h2>
                         <p class="detail-commander-name" id="detail-commander-name"></p>
                     </div>
@@ -37,6 +36,17 @@
                 <div class="deck-list-wrapper" id="deck-list-wrapper"></div>
             </div>
             <div class="detail-grid-container" id="detail-grid-container"></div>
+
+            <div class="sidebar" id="sidebar">
+                <div class="sidebar-inner">
+                    <button class="sidebar-close" id="sidebar-close">&times;</button>
+                    <img class="sidebar-img" id="sidebar-img" src="" alt="">
+                    <h2 class="sidebar-title" id="sidebar-title"></h2>
+                    <div class="sidebar-type" id="sidebar-type"></div>
+                    <div class="sidebar-text" id="sidebar-text"></div>
+                    <div class="sidebar-stats" id="sidebar-stats"></div>
+                </div>
+            </div>
         </div>
 
     </div>

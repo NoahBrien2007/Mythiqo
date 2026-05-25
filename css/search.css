@@ -107,6 +107,7 @@ body {
     background: var(--active-color);
     mask: url("../data/loopicon.svg") no-repeat center / contain;
     -webkit-mask: url("../data/loopicon.svg") no-repeat center / contain;
+    cursor: pointer;
 }
 
 .btn,
@@ -221,6 +222,7 @@ body {
     align-content: start;
     gap: 20px;
     padding: 20px;
+    transition: opacity 0.2s ease;
 }
 
 .card {
@@ -277,6 +279,7 @@ body {
     overflow-y: auto;
     border-left: 0px solid var(--green3);
     box-shadow: -4px 0 15px rgba(0, 0, 0, 0.5);
+    flex-shrink: 0;
 }
 
 .sidebar.active {

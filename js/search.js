@@ -62,7 +62,6 @@ const renderCards = (cardsData) => {
         card.className = "card";
 
         const imgUrl = cardData.image_uris ? cardData.image_uris.normal : cardData.card_faces[0].image_uris.normal;
-
         const img = document.createElement("img");
         img.src = imgUrl;
         card.appendChild(img);
@@ -103,11 +102,13 @@ const openSidebar = (cardData) => {
     sidebar.classList.add("active");
 };
 
-sidebarClose.onclick = () => {
+const closeSidebar = () => {
     sidebar.classList.remove("active");
     document.querySelectorAll(".card").forEach(c => c.classList.remove("active"));
     container.classList.remove("toggled");
 };
+
+sidebarClose.onclick = closeSidebar;
 
 filtersToggle.addEventListener("click", () => {
     filters.classList.toggle("active");
@@ -147,3 +148,13 @@ searchInput.addEventListener("keydown", (e) => {
     }
 });
 
+document.getElementById("search-trigger").addEventListener("click", fetchCards);
+
+window.addEventListener("DOMContentLoaded", () => {
+    const params = new URLSearchParams(window.location.search);
+    const queryParam = params.get("q");
+    if (queryParam) {
+        searchInput.value = queryParam;
+        fetchCards();
+    }
+});

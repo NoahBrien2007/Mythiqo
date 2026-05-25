@@ -12,6 +12,14 @@ const deckListWrapper = document.getElementById("deck-list-wrapper");
 const detailGridContainer = document.getElementById("detail-grid-container");
 const btnBackHub = document.getElementById("btn-back-hub");
 
+const sidebar = document.getElementById("sidebar");
+const sidebarClose = document.getElementById("sidebar-close");
+const sidebarImg = document.getElementById("sidebar-img");
+const sidebarTitle = document.getElementById("sidebar-title");
+const sidebarType = document.getElementById("sidebar-type");
+const sidebarText = document.getElementById("sidebar-text");
+const sidebarStats = document.getElementById("sidebar-stats");
+
 let decks = [];
 
 const mockCardsToFill = [
@@ -75,7 +83,34 @@ const categorizeCard = (typeLine) => {
     return "Other";
 };
 
+const openSidebar = (cardData) => {
+    const imgUrl = cardData.image_uris ? cardData.image_uris.normal : cardData.card_faces[0].image_uris.normal;
+    sidebarImg.src = imgUrl;
+    sidebarTitle.textContent = cardData.name || "";
+    sidebarType.textContent = cardData.type_line || "";
+    sidebarText.textContent = cardData.oracle_text || (cardData.card_faces ? cardData.card_faces[0].oracle_text : "");
+
+    if (cardData.power && cardData.toughness) {
+        sidebarStats.textContent = `${cardData.power} / ${cardData.toughness}`;
+    } else if (cardData.loyalty) {
+        sidebarStats.textContent = `Loyalty: ${cardData.loyalty}`;
+    } else {
+        sidebarStats.textContent = "";
+    }
+
+    sidebar.classList.add("active");
+};
+
+const closeSidebar = () => {
+    sidebar.classList.remove("active");
+    document.querySelectorAll(".card").forEach(c => c.classList.remove("active"));
+    detailGridContainer.classList.remove("toggled");
+};
+
+sidebarClose.onclick = closeSidebar;
+
 const openDeckDetail = (deckIndex) => {
+    closeSidebar();
     const deck = decks[deckIndex];
     viewHub.classList.remove("active");
     viewDetail.classList.add("active");
@@ -123,12 +158,30 @@ const openDeckDetail = (deckIndex) => {
                 <span class="item-qty">1</span>
                 <span class="item-name">${card.name}</span>
             `;
+            li.onclick = () => {
+                openSidebar(card);
+            };
             ul.appendChild(li);
 
             const cardDiv = document.createElement("div");
             cardDiv.className = "card";
             const imgUrl = card.image_uris ? card.image_uris.normal : (card.card_faces ? card.card_faces[0].image_uris.normal : "");
             cardDiv.innerHTML = `<img src="${imgUrl}" alt="${card.name}">`;
+
+            cardDiv.onclick = () => {
+                const active = cardDiv.classList.contains("active");
+                document.querySelectorAll(".card").forEach(c => c.classList.remove("active"));
+
+                if (active) {
+                    detailGridContainer.classList.remove("toggled");
+                    sidebar.classList.remove("active");
+                } else {
+                    detailGridContainer.classList.add("toggled");
+                    cardDiv.classList.add("active");
+                    openSidebar(card);
+                }
+            };
+
             typeGrid.appendChild(cardDiv);
         });
 
@@ -138,6 +191,7 @@ const openDeckDetail = (deckIndex) => {
 };
 
 btnBackHub.addEventListener("click", () => {
+    closeSidebar();
     viewDetail.classList.remove("active");
     viewHub.classList.add("active");
 });
@@ -188,5 +242,19 @@ formCreateDeck.addEventListener("submit", async (e) => {
         createBtn.disabled = false;
     }
 });
+
+const topbarSearchInput = document.getElementById("topbar-search-input");
+const triggerTopbarSearch = () => {
+    const val = topbarSearchInput.value.trim();
+    if (val) {
+        window.location.href = `search.html?q=${encodeURIComponent(val)}`;
+    }
+};
+topbarSearchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+        triggerTopbarSearch();
+    }
+});
+document.getElementById("topbar-search-trigger").addEventListener("click", triggerTopbarSearch);
 
 renderHub();

@@ -11,7 +11,7 @@
 
     <div class="topbar">
         <div class="search-box">
-            <div class="search-icon"></div>
+            <div class="search-icon" id="search-trigger"></div>
             <input
                 type="text"
                 id="search-input"
@@ -22,16 +22,13 @@
         <button class="btn" id="filters-toggle">
             FILTERS
         </button>
-        <button class="btn">
+        <button class="btn" onclick="window.location.href='deck.html'">
             DECKS
-        </button>
-        <button class="btn">
-            SIMULATE
         </button>
     </div>
 
     <div class="filter-container" id="filters">
-        <button class="mana-btn ms ms-w" id="mana-filter"></button>
+        <button class="mana-btn ms ms-w"></button>
         <button class="mana-btn ms ms-u"></button>
         <button class="mana-btn ms ms-b"></button>
         <button class="mana-btn ms ms-r"></button>

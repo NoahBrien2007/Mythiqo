@@ -3,10 +3,6 @@
 }
 
 :root {
-    --bg-primary: #4d4ddb;
-    --bg-secondary: #c4c4c7;
-    --bg-tertiary: #8c8ca8;
-    --text-color: #ffffff;
     --green1: #7aff66;
     --green2: #4ade80;
     --green3: #22c55e;
@@ -77,27 +73,26 @@ body {
     margin-top: 25vh;
     padding: 40px;
     border: 2px solid var(--green3);
-
-    background:
-    repeating-linear-gradient(
+    background: repeating-linear-gradient(
         45deg,
         rgba(0, 255, 0, 0.08) 0px,
         rgba(0, 255, 0, 0.08) 20px,
         transparent 20px,
         transparent 40px
-    ),
-    #000;
+    ), #000;
     z-index: 1;
 }
 
 .search-box {
     --active-color: var(--green3);
     display: flex;
+    align-items: center;
     gap: 10px;
     width: 100%;
     background-color: var(--black);
     border: 2px solid var(--active-color);
     transition: border-color 0.2s ease;
+    padding: 0 10px;
 }
 
 .search-box:focus-within {
@@ -106,6 +101,7 @@ body {
 
 .text-input {
     flex: 1;
+    height: 36px;
     border: none;
     outline: none;
     background: transparent;
@@ -122,6 +118,7 @@ body {
     background-color: var(--active-color);
     mask: url("../data/loopicon.svg") no-repeat center / contain;
     -webkit-mask: url("../data/loopicon.svg") no-repeat center / contain;
+    cursor: pointer;
 }
 
 .button-row {
@@ -134,12 +131,13 @@ body {
     flex: 1;
     text-align: center;
     text-decoration: none;
-    padding: 4px 0;
+    padding: 8px 0;
     border: 2px solid var(--green3);
     background-color: var(--black);
     color: var(--green3);
     cursor: pointer;
     transition: all 0.2s ease;
+    font-size: 14px;
 }
 
 .btn:hover {
