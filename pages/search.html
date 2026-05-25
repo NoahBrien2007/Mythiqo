@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cards</title>
     <link rel="stylesheet" href="../css/search.css">
+    <link rel="stylesheet" href="../css/card-details.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mana-font@latest/css/mana.css">
 </head>
 <body>
@@ -28,25 +29,114 @@
     </div>
 
     <div class="filter-container" id="filters">
-        <button class="mana-btn ms ms-w"></button>
-        <button class="mana-btn ms ms-u"></button>
-        <button class="mana-btn ms ms-b"></button>
-        <button class="mana-btn ms ms-r"></button>
-        <button class="mana-btn ms ms-g"></button>
+        <div class="filter-group">
+            <label class="filter-label">Colors</label>
+            <div class="filter-row">
+                <button class="mana-btn ms ms-w"></button>
+                <button class="mana-btn ms ms-u"></button>
+                <button class="mana-btn ms ms-b"></button>
+                <button class="mana-btn ms ms-r"></button>
+                <button class="mana-btn ms ms-g"></button>
+                
+                <div class="custom-select" id="select-color-operator">
+                    <button class="select-btn">EXACTLY THESE COLORS</button>
+                    <div class="select-menu">
+                        <div class="select-option">EXACTLY THESE COLORS</div>
+                        <div class="select-option">INCLUDING THESE COLORS</div>
+                        <div class="select-option">AT MOST THESE COLORS</div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-       <div class="custom-select">
-            <button class="select-btn">
-                EXACTLY THESE COLORS
-            </button>
-            <div class="select-menu">
-                <div class="select-option">
-                    EXACTLY THESE COLORS
+        <div class="filter-group">
+            <label class="filter-label">Card Type</label>
+            <div class="custom-select" id="select-type">
+                <button class="select-btn">ANY TYPE</button>
+                <div class="select-menu">
+                    <div class="select-option">ANY TYPE</div>
+                    <div class="select-option">CREATURE</div>
+                    <div class="select-option">INSTANT</div>
+                    <div class="select-option">SORCERY</div>
+                    <div class="select-option">ENCHANTMENT</div>
+                    <div class="select-option">ARTIFACT</div>
+                    <div class="select-option">PLANESWALKER</div>
+                    <div class="select-option">LAND</div>
+                    <div class="select-option">LEGENDARY</div>
                 </div>
-                <div class="select-option">
-                    INCLUDING THESE COLORS
+            </div>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">Rarity</label>
+            <div class="custom-select" id="select-rarity">
+                <button class="select-btn">ANY RARITY</button>
+                <div class="select-menu">
+                    <div class="select-option">ANY RARITY</div>
+                    <div class="select-option">COMMON</div>
+                    <div class="select-option">UNCOMMON</div>
+                    <div class="select-option">RARE</div>
+                    <div class="select-option">MYTHIC</div>
                 </div>
-                <div class="select-option">
-                    AT MOST THESE COLORS
+            </div>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">Legality</label>
+            <div class="custom-select" id="select-format">
+                <button class="select-btn">ANY FORMAT</button>
+                <div class="select-menu">
+                    <div class="select-option">ANY FORMAT</div>
+                    <div class="select-option">STANDARD</div>
+                    <div class="select-option">PIONEER</div>
+                    <div class="select-option">MODERN</div>
+                    <div class="select-option">LEGACY</div>
+                    <div class="select-option">COMMANDER</div>
+                    <div class="select-option">PAUPER</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">Mana Value (CMC)</label>
+            <div class="filter-row">
+                <div class="custom-select" id="select-cmc-operator" style="width: 80px;">
+                    <button class="select-btn">=</button>
+                    <div class="select-menu">
+                        <div class="select-option">=</div>
+                        <div class="select-option">&gt;</div>
+                        <div class="select-option">&lt;</div>
+                        <div class="select-option">&gt;=</div>
+                        <div class="select-option">&lt;=</div>
+                    </div>
+                </div>
+                <input type="number" id="cmc-value" class="text-input" placeholder="Value" min="0" max="20" style="width: 80px; border: 2px solid var(--green3); text-align: center;">
+            </div>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">Sort By</label>
+            <div class="custom-select" id="select-sort">
+                <button class="select-btn">NAME</button>
+                <div class="select-menu">
+                    <div class="select-option">NAME</div>
+                    <div class="select-option">CMC</div>
+                    <div class="select-option">RARITY</div>
+                    <div class="select-option">RELEASED</div>
+                    <div class="select-option">POWER</div>
+                    <div class="select-option">TOUGHNESS</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">Direction</label>
+            <div class="custom-select" id="select-dir">
+                <button class="select-btn">AUTO</button>
+                <div class="select-menu">
+                    <div class="select-option">AUTO</div>
+                    <div class="select-option">ASCENDING</div>
+                    <div class="select-option">DESCENDING</div>
                 </div>
             </div>
         </div>
@@ -66,6 +156,7 @@
         </div>
     </div>
 
+    <script src="../js/card-details.js"></script>
     <script src="../js/search.js"></script>
 
 </body>

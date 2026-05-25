@@ -55,8 +55,7 @@ body {
     flex-shrink: 0;
 }
 
-.topbar,
-.filter-container {
+.topbar {
     display: flex;
     gap: 10px;
     align-items: center;
@@ -65,10 +64,49 @@ body {
 .filter-container {
     display: none;
     border-top: none;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-start;
 }
 
 .filter-container.active {
     display: flex;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.filter-label {
+    font-size: 11px;
+    color: var(--green3);
+    text-transform: uppercase;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.filter-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.filter-group input[type="number"] {
+    background: var(--black);
+    color: var(--green3);
+    border: 2px solid var(--green3);
+    height: 40px;
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+    padding: 0 10px;
+}
+
+.filter-group input[type="number"]:focus {
+    border-color: var(--green2);
+    color: var(--green2);
 }
 
 .search-box {

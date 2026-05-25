@@ -152,7 +152,6 @@ body {
     height: 346px;
     background: #111;
     border: 2px solid var(--green3);
-    border-radius: 4.75% / 3.5%;
     position: relative;
     cursor: pointer;
     overflow: hidden;
