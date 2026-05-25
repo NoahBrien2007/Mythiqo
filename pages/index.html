@@ -1,24 +1,26 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Home</title>
+    <meta charset="UTF-8">
+    <title>Mana Search</title>
+    <link href="https://cdn.jsdelivr.net/npm/mana-font@latest/css/mana.min.css" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="../css/homepage.css">
 </head>
 <body>
+    <div class="mana-bg" id="mana-bg"></div>
+
     <div class="container">
         <img src="../data/logo.svg" class="logo">
-
-
         <div class="search-box">
-            <img src="../data/loopicon.svg" class="search-icon">
-            <input type="text" class="text-input" placeholder="Search card...">
+            <div class="search-icon"></div>
+            <input type="text" class="text-input" placeholder="Search...">
         </div>
-
         <div class="button-row">
-            <a href="decks.html" class="btn">Go To Decks</a>
-            <a href="simulator.html" class="btn">Simulate</a>
+            <a href="#" class="btn">DECKS</a>
+            <a href="#" class="btn">SIMULATE</a>
         </div>
-
     </div>
+
+    <script src="../js/homepage.js"></script>
 </body>
 </html>

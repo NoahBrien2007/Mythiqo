@@ -1,0 +1,333 @@
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+:root {
+    --green1: #7aff66;
+    --green2: #4ade80;
+    --green3: #22c55e;
+    --green4: #166534;
+    --black: #121212;
+    --grey: #333333;
+}
+
+body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: Arial, sans-serif;
+    background: var(--black);
+    overflow: hidden;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--black);
+    border-left: 1px solid var(--green4);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--green4);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--green3);
+}
+
+.topbar,
+.filter-container {
+    width: 100%;
+    padding: 16px;
+    border: 1px solid var(--green3);
+    background: repeating-linear-gradient(
+        45deg,
+        rgba(0, 255, 0, 0.08) 0px,
+        rgba(0, 255, 0, 0.08) 20px,
+        transparent 20px,
+        transparent 40px
+    ), #000;
+    flex-shrink: 0;
+}
+
+.topbar,
+.filter-container {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.filter-container {
+    display: none;
+    border-top: none;
+}
+
+.filter-container.active {
+    display: flex;
+}
+
+.search-box {
+    --active-color: var(--green3);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    padding: 0 10px;
+    border: 2px solid var(--active-color);
+    background: var(--black);
+    transition: border-color 0.2s ease;
+}
+
+.search-box:focus-within {
+    --active-color: var(--green2);
+}
+
+.text-input {
+    flex: 1;
+    height: 36px;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--active-color);
+    font-size: 14px;
+}
+
+.text-input::placeholder {
+    color: var(--active-color);
+}
+
+.search-icon {
+    width: 20px;
+    height: 20px;
+    background: var(--active-color);
+    mask: url("../data/loopicon.svg") no-repeat center / contain;
+    -webkit-mask: url("../data/loopicon.svg") no-repeat center / contain;
+}
+
+.btn,
+.mana-btn {
+    border: 2px solid var(--green3);
+    background: var(--black);
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.btn {
+    min-width: 120px;
+    height: 40px;
+    color: var(--green3);
+    font-size: 14px;
+}
+
+.mana-btn {
+    width: 40px;
+    height: 40px;
+    color: var(--green2);
+}
+
+.btn:hover,
+.mana-btn.active,
+.btn.active {
+    background: var(--green2);
+    border-color: var(--green2);
+    color: var(--black);
+}
+
+.custom-select {
+    position: relative;
+    width: 250px;
+    height: 40px;
+}
+
+.select-btn {
+    width: 100%;
+    height: 100%;
+    background: var(--black);
+    color: var(--green3);
+    border: 2px solid var(--green3);
+    cursor: pointer;
+    padding: 0 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.select-btn::after {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--green3);
+    border-bottom: 2px solid var(--green3);
+    transform: translateY(-25%) rotate(45deg);
+}
+
+.select-btn.active::after {
+    transform: translateY(25%) rotate(225deg);
+}
+
+.select-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    width: 100%;
+    background: var(--black);
+    color: var(--green3);
+    border: 2px solid var(--green3);
+    overflow: hidden;
+    z-index: 10;
+}
+
+.select-menu.active {
+    display: block;
+}
+
+.select-option {
+    padding: 12px;
+    cursor: pointer;
+}
+
+.select-option:hover {
+    background: #1e1e1e;
+}
+
+.main-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    background: repeating-linear-gradient(
+        135deg,
+        rgba(0, 255, 0, 0.08) 0px,
+        rgba(0, 255, 0, 0.08) 20px,
+        transparent 20px,
+        transparent 40px
+    ), #000;
+    border: 1px solid var(--green3);
+    border-top: none;
+}
+
+.card-container {
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, 248px);
+    justify-content: space-evenly;
+    align-content: start;
+    gap: 20px;
+    padding: 20px;
+}
+
+.card {
+    width: 248px;
+    height: 346px;
+    background: transparent;
+    position: relative;
+    cursor: pointer;
+    border-radius: 4.75% / 3.5%;
+    transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+}
+
+.card:hover,
+.card.active {
+    transform: scale(1.04);
+    box-shadow: 0 0 16px rgba(0, 255, 0, 0.4);
+}
+
+.card-container.toggled .card {
+    opacity: 0.6;
+}
+
+.card-container.toggled .card.active {
+    opacity: 1;
+}
+
+.loader {
+    grid-column: 1 / -1;
+    width: 48px;
+    height: 48px;
+    border: 5px solid var(--grey);
+    border-top-color: var(--green3);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 40px auto;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.sidebar {
+    width: 0;
+    background: var(--black);
+    transition: width 0.3s ease, border 0.3s ease;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-left: 0px solid var(--green3);
+    box-shadow: -4px 0 15px rgba(0, 0, 0, 0.5);
+}
+
+.sidebar.active {
+    width: 360px;
+    border-left: 2px solid var(--green3);
+}
+
+.sidebar-inner {
+    width: 360px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.sidebar-close {
+    align-self: flex-end;
+    background: transparent;
+    border: none;
+    color: var(--green3);
+    font-size: 28px;
+    cursor: pointer;
+}
+
+.sidebar-img {
+    width: 100%;
+    border-radius: 4.75% / 3.5%;
+}
+
+.sidebar-title {
+    color: var(--green1);
+    margin: 0;
+    font-size: 20px;
+}
+
+.sidebar-type {
+    color: var(--green2);
+    font-size: 14px;
+    font-style: italic;
+}
+
+.sidebar-text {
+    color: #fff;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.sidebar-stats {
+    color: var(--green1);
+    font-size: 16px;
+    font-weight: bold;
+    align-self: flex-end;
+}

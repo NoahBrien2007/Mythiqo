@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decks</title>
+    <link rel="stylesheet" href="../css/deck.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mana-font@latest/css/mana.css">
+</head>
+<body>
+
+    <div class="topbar">
+        <div class="search-box">
+            <div class="search-icon"></div>
+            <input type="text" class="text-input" placeholder="Search...">
+        </div>
+        <button class="btn">FILTERS</button>
+        <button class="btn active">DECKS</button>
+        <button class="btn">SIMULATE</button>
+    </div>
+
+    <div class="view-container">
+
+        <div class="view active" id="view-hub">
+            <div class="deck-hub-grid" id="deck-hub-grid"></div>
+        </div>
+
+        <div class="view" id="view-detail">
+            <div class="deck-sidebar">
+                <div class="deck-sidebar-header">
+                    <button class="btn-back" id="btn-back-hub">&#8592;</button>
+                    <div style="display:inline-block;">
+                        <h2 class="detail-deck-name" id="detail-deck-name"></h2>
+                        <p class="detail-commander-name" id="detail-commander-name"></p>
+                    </div>
+                </div>
+                <div class="deck-list-wrapper" id="deck-list-wrapper"></div>
+            </div>
+            <div class="detail-grid-container" id="detail-grid-container"></div>
+        </div>
+
+    </div>
+
+    <div class="modal-backdrop" id="modal-backdrop">
+        <div class="modal">
+            <h2 class="modal-title">NEW DECK</h2>
+            <form id="form-create-deck" style="display:flex; flex-direction:column; gap:15px;">
+                <div class="form-group">
+                    <label>Deck Name</label>
+                    <input type="text" id="input-deck-name" class="modal-input" required>
+                </div>
+                <div class="form-group">
+                    <label>Commander</label>
+                    <input type="text" id="input-commander" class="modal-input" placeholder="e.g. Atraxa, Praetors' Voice" required>
+                </div>
+                <div class="form-group">
+                    <label>Labels (comma separated)</label>
+                    <input type="text" id="input-labels" class="modal-input">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="input-info" class="modal-textarea"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn" id="close-modal">CANCEL</button>
+                    <button type="submit" class="btn" id="btn-create-deck">CREATE DECK</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../js/deck.js"></script>
+
+</body>
+</html>

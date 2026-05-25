@@ -1,20 +1,75 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cards</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../css/search.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mana-font@latest/css/mana.css">
 </head>
 <body>
 
-    <h1>Cards Page</h1>
+    <div class="topbar">
+        <div class="search-box">
+            <div class="search-icon"></div>
+            <input
+                type="text"
+                id="search-input"
+                class="text-input"
+                placeholder="Search..."
+            >
+        </div>
+        <button class="btn" id="filters-toggle">
+            FILTERS
+        </button>
+        <button class="btn">
+            DECKS
+        </button>
+        <button class="btn">
+            SIMULATE
+        </button>
+    </div>
 
-    <button id="cardButton">
-        Reveal Card
-    </button>
+    <div class="filter-container" id="filters">
+        <button class="mana-btn ms ms-w" id="mana-filter"></button>
+        <button class="mana-btn ms ms-u"></button>
+        <button class="mana-btn ms ms-b"></button>
+        <button class="mana-btn ms ms-r"></button>
+        <button class="mana-btn ms ms-g"></button>
 
-    <p id="message"></p>
+       <div class="custom-select">
+            <button class="select-btn">
+                EXACTLY THESE COLORS
+            </button>
+            <div class="select-menu">
+                <div class="select-option">
+                    EXACTLY THESE COLORS
+                </div>
+                <div class="select-option">
+                    INCLUDING THESE COLORS
+                </div>
+                <div class="select-option">
+                    AT MOST THESE COLORS
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <script src="search.js"></script>
+    <div class="main-content">
+        <div class="card-container"></div>
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-inner">
+                <button class="sidebar-close" id="sidebar-close">&times;</button>
+                <img class="sidebar-img" id="sidebar-img" src="" alt="">
+                <h2 class="sidebar-title" id="sidebar-title"></h2>
+                <div class="sidebar-type" id="sidebar-type"></div>
+                <div class="sidebar-text" id="sidebar-text"></div>
+                <div class="sidebar-stats" id="sidebar-stats"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/search.js"></script>
 
 </body>
 </html>
