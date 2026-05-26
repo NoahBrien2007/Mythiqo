@@ -123,6 +123,13 @@ const initCardDetailsShared = () => {
         }
     });
 
+    // Dismiss context menu on right click anywhere else
+    document.addEventListener("contextmenu", (e) => {
+        if (globalContextMenu && !e.target.closest(".card") && !e.target.closest(".deck-list-item") && !globalContextMenu.contains(e.target)) {
+            globalContextMenu.style.display = "none";
+        }
+    });
+
     // Dismiss context menu on key Escape
     document.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
@@ -655,12 +662,26 @@ const showContextMenu = (e, cardData, options = {}) => {
  * @param {object} deck
  */
 const exportDeck = (deck) => {
-    const json = JSON.stringify(deck, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
+    // Generate Moxfield-compatible plain text format
+    let text = "Commander\n";
+    text += `1 ${deck.commander.name}\n\n`;
+    text += "Deck\n";
+    
+    // Group deck cards by name
+    const counts = {};
+    deck.cards.forEach(card => {
+        counts[card.name] = (counts[card.name] || 0) + 1;
+    });
+    
+    for (const [name, count] of Object.entries(counts)) {
+        text += `${count} ${name}\n`;
+    }
+    
+    const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${deck.name.replace(/\s+/g, "_")}.json`;
+    a.download = `${deck.name.replace(/\s+/g, "_")}_decklist.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -675,32 +696,142 @@ const exportDeck = (deck) => {
  */
 const importDeck = (file) => {
     return new Promise((resolve, reject) => {
-        if (!file || file.type !== "application/json") {
-            reject("Please select a valid .json deck file.");
+        if (!file) {
+            reject("Please select a valid file.");
             return;
         }
         const reader = new FileReader();
-        reader.onload = (evt) => {
+        reader.onload = async (evt) => {
+            const content = evt.target.result;
             try {
-                const deck = JSON.parse(evt.target.result);
-                // Basic structure validation
-                if (!deck.id || !deck.name || !deck.commander || !Array.isArray(deck.cards)) {
-                    reject("Invalid deck file — missing required fields (id, name, commander, cards).");
+                // Try parsing as JSON first
+                if (file.name.endsWith(".json")) {
+                    const deck = JSON.parse(content);
+                    if (!deck.id || !deck.name || !deck.commander || !Array.isArray(deck.cards)) {
+                        reject("Invalid deck file - missing required fields.");
+                        return;
+                    }
+                    const decks = loadDecks();
+                    const existing = decks.findIndex(d => d.id === deck.id);
+                    if (existing !== -1) {
+                        decks[existing] = deck;
+                    } else {
+                        decks.push(deck);
+                    }
+                    saveDecks(decks);
+                    resolve(deck);
                     return;
                 }
-                const decks = loadDecks();
-                // Avoid duplicate import by id
-                const existing = decks.findIndex(d => d.id === deck.id);
-                if (existing !== -1) {
-                    // Overwrite the existing one
-                    decks[existing] = deck;
-                } else {
-                    decks.push(deck);
+                
+                // Otherwise, parse as Moxfield plain text list
+                const lines = content.split(/\r?\n/);
+                let commanderName = "";
+                const deckCardNames = [];
+                let section = "";
+                
+                for (let line of lines) {
+                    line = line.trim();
+                    if (!line) continue;
+                    
+                    const lower = line.toLowerCase();
+                    if (lower === "commander") {
+                        section = "commander";
+                        continue;
+                    } else if (lower === "deck") {
+                        section = "deck";
+                        continue;
+                    }
+                    
+                    let cleanLine = line.replace(/\([^)]+\)/g, "").replace(/\*[^*]+\*/g, "").trim();
+                    const match = cleanLine.match(/^(\d+)\s+(.+)$/);
+                    if (match) {
+                        const qty = parseInt(match[1], 10);
+                        const cardName = match[2].trim();
+                        
+                        if (section === "commander") {
+                            commanderName = cardName;
+                        } else {
+                            for (let i = 0; i < qty; i++) {
+                                deckCardNames.push(cardName);
+                            }
+                        }
+                    } else {
+                        if (section === "commander") {
+                            commanderName = cleanLine;
+                        } else {
+                            deckCardNames.push(cleanLine);
+                        }
+                    }
                 }
+                
+                if (!commanderName) {
+                    reject("Could not find a Commander in the text file.");
+                    return;
+                }
+                
+                const cmdRes = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(commanderName)}`);
+                if (!cmdRes.ok) {
+                    reject("Could not find Commander on Scryfall.");
+                    return;
+                }
+                const commanderCard = await cmdRes.json();
+                
+                const deckCards = [];
+                const uniqueNames = Array.from(new Set(deckCardNames));
+                const nameToCardMap = {};
+                
+                for (let i = 0; i < uniqueNames.length; i += 75) {
+                    const chunk = uniqueNames.slice(i, i + 75);
+                    const identifiers = chunk.map(name => ({ name }));
+                    
+                    const colRes = await fetch("https://api.scryfall.com/cards/collection", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ identifiers })
+                    });
+                    
+                    if (colRes.ok) {
+                           const colData = await colRes.json();
+                           if (colData.data) {
+                               colData.data.forEach(card => {
+                                   if (card && card.name) {
+                                       nameToCardMap[card.name.toLowerCase()] = card;
+                                   }
+                               });
+                           }
+                    }
+                }
+                
+                deckCardNames.forEach(name => {
+                    const found = nameToCardMap[name.toLowerCase()];
+                    if (found) {
+                        deckCards.push(found);
+                    } else {
+                        deckCards.push({
+                            name: name,
+                            type_line: "Unknown Type",
+                            oracle_text: "Details not loaded.",
+                            image_uris: { normal: "https://svgs.scryfall.io/card-back.svg" }
+                        });
+                    }
+                });
+                
+                const newDeck = {
+                    id: Date.now(),
+                    name: file.name.replace(/\.[^/.]+$/, "").replace(/_decklist/i, "").replace(/_+/g, " "),
+                    commander: commanderCard,
+                    info: "Imported from Moxfield text format.",
+                    labels: "Imported",
+                    cards: deckCards
+                };
+                
+                const decks = loadDecks();
+                decks.push(newDeck);
                 saveDecks(decks);
-                resolve(deck);
+                resolve(newDeck);
+                
             } catch (e) {
-                reject("Could not parse the JSON file. It may be corrupted.");
+                reject("Error parsing deck file: " + e.message);
             }
         };
         reader.onerror = () => reject("Error reading file.");
@@ -731,11 +862,11 @@ const validateDeck = (deck) => {
     // Total count = commander (1) + deck.cards
     const totalCount = 1 + cards.length;
     if (totalCount < 100) {
-        warnings.push({ level: "warn", message: `Deck has ${totalCount}/100 cards — needs ${100 - totalCount} more.` });
+        warnings.push({ level: "warn", message: `<strong>Deck</strong> has ${totalCount}/100 cards - needs ${100 - totalCount} <strong>more</strong>.` });
     } else if (totalCount > 100) {
-        warnings.push({ level: "warn", message: `Deck has ${totalCount}/100 cards — ${totalCount - 100} too many.` });
+        warnings.push({ level: "warn", message: `<strong>Deck</strong> has ${totalCount}/100 cards - ${totalCount - 100} <strong>too many</strong>.` });
     } else {
-        warnings.push({ level: "ok", message: "Deck is exactly 100 cards. ✓" });
+        warnings.push({ level: "ok", message: "<strong>Deck</strong> is <strong>exactly 100 cards</strong>." });
     }
 
     // Commander legality check
@@ -746,34 +877,62 @@ const validateDeck = (deck) => {
         const cmdLegality = commander.legalities && commander.legalities.commander;
 
         if (!isLegendary || !isCreatureOrPW) {
-            warnings.push({ level: "error", message: `Commander "${commander.name}" must be a Legendary Creature or Planeswalker.` });
+            warnings.push({ level: "error", message: `<strong>Commander</strong> <strong>"${commander.name}"</strong> must be a <strong>Legendary Creature</strong> or <strong>Planeswalker</strong>.` });
         }
         if (cmdLegality && cmdLegality !== "legal") {
-            warnings.push({ level: "error", message: `Commander "${commander.name}" is not legal in Commander format (${cmdLegality.replace("_", " ")}).` });
-        }
-        if (isLegendary && isCreatureOrPW && (!cmdLegality || cmdLegality === "legal")) {
-            warnings.push({ level: "ok", message: `Commander "${commander.name}" is valid. ✓` });
+            warnings.push({ level: "error", message: `<strong>Commander</strong> <strong>"${commander.name}"</strong> is <strong>not legal</strong> in Commander format.` });
         }
     }
 
-    // Singleton check — group by name (use oracle_id if available)
+    // Helper: cards that explicitly allow multiple copies (e.g. Relentless Rats, Shadowborn Apostle)
+    const allowsMultipleCopies = (card) => {
+        const text = (card.oracle_text || "").toLowerCase();
+        if (text.includes("a deck can have any number")) return true;
+        if (Array.isArray(card.card_faces)) {
+            return card.card_faces.some(face => (face.oracle_text || "").toLowerCase().includes("a deck can have any number"));
+        }
+        return false;
+    };
+
+    // Color identity check - flag cards whose colors are outside the commander's identity
+    if (commander && Array.isArray(commander.color_identity)) {
+        const cmdColors = new Set(commander.color_identity.map(c => c.toUpperCase()));
+        const seenColorViolations = new Set();
+        cards.forEach(card => {
+            if (!card || !card.name || !Array.isArray(card.color_identity)) return;
+            const cardKey = card.oracle_id || card.name;
+            if (seenColorViolations.has(cardKey)) return;
+            const offColors = card.color_identity.filter(c => !cmdColors.has(c.toUpperCase()));
+            if (offColors.length > 0) {
+                seenColorViolations.add(cardKey);
+                warnings.push({
+                    level: "error",
+                    message: `<strong>"${card.name}"</strong> <strong>color identity does not match</strong> the commander's color identity.`
+                });
+            }
+        });
+    }
+
+    // Singleton check - group by oracle_id (or name)
     const seen = {};
     cards.forEach(card => {
         if (!card || !card.name) return;
-        if (BASIC_LAND_NAMES.has(card.name)) return; // Basics exempt
+        if (BASIC_LAND_NAMES.has(card.name)) return; // Basic lands exempt
+        if (allowsMultipleCopies(card)) return;       // Cards like Relentless Rats exempt
         const key = card.oracle_id || card.name;
         seen[key] = (seen[key] || { card, count: 0 });
         seen[key].count++;
     });
-    // Also check commander name isn't in deck
+
+    // Also check commander is not duplicated in deck
     const cmdKey = commander ? (commander.oracle_id || commander.name) : null;
     if (cmdKey && seen[cmdKey]) {
-        warnings.push({ level: "error", message: `"${commander.name}" appears in the deck AND as Commander — remove the duplicate.` });
+        warnings.push({ level: "error", message: `<strong>"${commander.name}"</strong> appears in the deck AND as <strong>Commander</strong> - <strong>remove duplicate</strong>.` });
     }
 
     const duplicates = Object.values(seen).filter(e => e.count > 1);
     duplicates.forEach(({ card, count }) => {
-        warnings.push({ level: "warn", message: `"${card.name}" appears ${count}× — Commander allows only 1 copy of non-basic cards.` });
+        warnings.push({ level: "warn", message: `<strong>"${card.name}"</strong> appears ${count}x - <strong>only 1 copy</strong> is allowed.` });
     });
 
     return warnings;

@@ -55,8 +55,25 @@ const closeModal = () => {
 const createNewDeckCell = () => {
     const cell = document.createElement("div");
     cell.className = "deck-cell new-deck-cell";
-    cell.innerHTML = `<div class="new-deck-icon">+</div>`;
-    cell.onclick = openModal;
+    cell.style.position = "relative";
+    cell.innerHTML = `
+        <div class="new-deck-icon">+</div>
+        <button class="btn btn-import" id="btn-import-deck" style="position: absolute; bottom: 15px; right: 15px; min-width: auto; height: 32px; padding: 0 12px; font-size: 11px; z-index: 10;">IMPORT</button>
+    `;
+    
+    const importBtn = cell.querySelector("#btn-import-deck");
+    importBtn.onclick = (e) => {
+        e.stopPropagation();
+        const inputImportFile = document.getElementById("input-import-file");
+        if (inputImportFile) {
+            inputImportFile.click();
+        }
+    };
+
+    cell.onclick = (e) => {
+        if (e.target.id === "btn-import-deck") return;
+        openModal();
+    };
     return cell;
 };
 
@@ -168,117 +185,11 @@ const openSidebar = (cardData) => {
         ${legalityList}
     `;
 
-    // Compact Sidebar Add to Deck Button & Dropdown Setup
-    let addContainer = sidebar.querySelector(".sidebar-add-container");
-    if (!addContainer) {
-        addContainer = document.createElement("div");
-        addContainer.className = "sidebar-add-container";
-        addContainer.style.position = "relative";
-        addContainer.style.marginTop = "14px";
-        addContainer.innerHTML = `
-            <button class="btn" id="sidebar-add-btn" style="width: 100%;">ADD TO DECK</button>
-            <div class="sidebar-decks-dropdown" id="sidebar-decks-dropdown" style="display: none; position: absolute; bottom: 100%; left: 0; width: 100%; background: #111; border: 1px solid var(--green3); box-shadow: 0 -4px 10px rgba(0,255,0,0.25); z-index: 100; max-height: 200px; overflow-y: auto;"></div>
-        `;
-        sidebar.querySelector(".sidebar-inner").appendChild(addContainer);
+    // Remove Add to Deck button if it exists in sidebar (since we are on Decks page)
+    const existingAddContainer = sidebar.querySelector(".sidebar-add-container");
+    if (existingAddContainer) {
+        existingAddContainer.remove();
     }
-
-    const sidebarAddBtn = addContainer.querySelector("#sidebar-add-btn");
-    const sidebarDecksDropdown = addContainer.querySelector("#sidebar-decks-dropdown");
-
-    sidebarAddBtn.onclick = (e) => {
-        e.stopPropagation();
-        const active = sidebarDecksDropdown.style.display === "block";
-        sidebarDecksDropdown.style.display = active ? "none" : "block";
-    };
-
-    const setupDropdownOptions = () => {
-        const decksList = window.CardDetailsShared ? window.CardDetailsShared.loadDecks() : [];
-        sidebarDecksDropdown.innerHTML = "";
-
-        if (decksList.length === 0) {
-            const item = document.createElement("div");
-            item.style.padding = "10px";
-            item.style.color = "#888";
-            item.style.fontSize = "12px";
-            item.style.cursor = "pointer";
-            item.textContent = "+ Create New Deck...";
-            item.onclick = () => {
-                sidebarDecksDropdown.style.display = "none";
-                const name = prompt("Enter new deck name:", `${cardData.name} Commander Deck`);
-                if (name) {
-                    const newD = window.CardDetailsShared.createDeckFromCard(name, cardData);
-                    alert(`Created deck "${newD.name}" with ${cardData.name} as Commander!`);
-                    setupDropdownOptions();
-                }
-            };
-            sidebarDecksDropdown.appendChild(item);
-        } else {
-            decksList.forEach(d => {
-                const item = document.createElement("div");
-                item.style.padding = "10px";
-                item.style.fontSize = "12px";
-                item.style.cursor = "pointer";
-                item.style.borderBottom = "1px solid #222";
-                item.textContent = d.name;
-                item.onmouseover = () => {
-                    item.style.background = "var(--green3)";
-                    item.style.color = "var(--black)";
-                };
-                item.onmouseout = () => {
-                    item.style.background = "transparent";
-                    item.style.color = "#ccc";
-                };
-                item.onclick = () => {
-                    sidebarDecksDropdown.style.display = "none";
-                    const currentDecks = window.CardDetailsShared.loadDecks();
-                    const targetDeck = currentDecks.find(td => td.id == d.id);
-                    if (targetDeck) {
-                        targetDeck.cards.push(cardData);
-                        window.CardDetailsShared.saveDecks(currentDecks);
-                        alert(`Added ${cardData.name} to ${targetDeck.name}!`);
-
-                        // Reactive refresh on the deck details view
-                        decks = currentDecks;
-                        if (currentDeckIndex !== -1 && decks[currentDeckIndex].id == targetDeck.id) {
-                            openDeckDetail(currentDeckIndex);
-                        }
-                    }
-                };
-                sidebarDecksDropdown.appendChild(item);
-            });
-
-            const createItem = document.createElement("div");
-            createItem.style.padding = "10px";
-            createItem.style.fontSize = "12px";
-            createItem.style.cursor = "pointer";
-            createItem.style.color = "var(--green2)";
-            createItem.textContent = "+ Create New Deck...";
-            createItem.onmouseover = () => {
-                createItem.style.background = "var(--green3)";
-                createItem.style.color = "var(--black)";
-            };
-            createItem.onmouseout = () => {
-                createItem.style.background = "transparent";
-                createItem.style.color = "var(--green2)";
-            };
-            createItem.onclick = () => {
-                sidebarDecksDropdown.style.display = "none";
-                const name = prompt("Enter new deck name:", `${cardData.name} Commander Deck`);
-                if (name) {
-                    const newD = window.CardDetailsShared.createDeckFromCard(name, cardData);
-                    alert(`Created deck "${newD.name}" with ${cardData.name} as Commander!`);
-                    setupDropdownOptions();
-                }
-            };
-            sidebarDecksDropdown.appendChild(createItem);
-        }
-    };
-
-    setupDropdownOptions();
-
-    document.addEventListener("click", () => {
-        if (sidebarDecksDropdown) sidebarDecksDropdown.style.display = "none";
-    });
 
     sidebar.classList.add("active");
 };
@@ -291,6 +202,83 @@ const closeSidebar = () => {
 
 sidebarClose.onclick = closeSidebar;
 
+// Custom Toast notification
+const showToast = (message, isError = false) => {
+    let toast = document.getElementById("deck-toast");
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "deck-toast";
+        document.body.appendChild(toast);
+    }
+    toast.className = `deck-toast ${isError ? 'deck-toast-error' : 'deck-toast-ok'}`;
+    toast.textContent = message;
+    
+    // Trigger animation
+    setTimeout(() => {
+        toast.classList.add("active");
+    }, 10);
+    
+    // Auto-remove
+    setTimeout(() => {
+        toast.classList.remove("active");
+    }, 3000);
+};
+
+// Render Warnings
+const renderWarnings = (deck) => {
+    const warningsPanel = document.getElementById("deck-warnings");
+    if (!warningsPanel) return;
+
+    warningsPanel.innerHTML = "";
+    if (!window.CardDetailsShared || !window.CardDetailsShared.validateDeck) return;
+
+    const warnings = window.CardDetailsShared.validateDeck(deck);
+    
+    const errors = warnings.filter(w => w.level === "error").length;
+    const warns = warnings.filter(w => w.level === "warn").length;
+    const total = warnings.length;
+
+    let summaryText = "";
+    let overallLevel = "ok";
+    let summaryIcon = "🟢";
+
+    if (errors > 0) {
+        overallLevel = "error";
+        summaryIcon = "🔴";
+        summaryText = `${total} Error${total > 1 ? 's' : ''} / Warning${total > 1 ? 's' : ''}`;
+    } else if (warns > 0) {
+        overallLevel = "warn";
+        summaryIcon = "🟡";
+        summaryText = `${total} Warning${total > 1 ? 's' : ''}`;
+    } else {
+        summaryText = "Valid Commander Deck";
+    }
+
+    const summaryDiv = document.createElement("div");
+    summaryDiv.className = `warning-summary ${overallLevel}`;
+    
+    // If there are warnings/errors, append the hover dropdown
+    if (total > 0) {
+        summaryDiv.innerHTML = `
+            <span>${summaryIcon} ${summaryText}</span>
+            <span style="font-size: 10px; opacity: 0.7; pointer-events: none;">(Hover to view)</span>
+            <div class="warning-detail-dropdown"></div>
+        `;
+        
+        const dropdown = summaryDiv.querySelector(".warning-detail-dropdown");
+        warnings.forEach(w => {
+            const item = document.createElement("div");
+            item.className = `warning-detail-item ${w.level}`;
+            item.innerHTML = w.message;
+            dropdown.appendChild(item);
+        });
+    } else {
+        summaryDiv.innerHTML = `<span>${summaryIcon} ${summaryText}</span>`;
+    }
+
+    warningsPanel.appendChild(summaryDiv);
+};
+
 const openDeckDetail = (deckIndex) => {
     currentDeckIndex = deckIndex;
     closeSidebar();
@@ -301,12 +289,24 @@ const openDeckDetail = (deckIndex) => {
     detailDeckName.textContent = deck.name;
     detailCommanderName.textContent = deck.commander.name;
 
-    const grouped = { Commander: [deck.commander] };
+    // Call validation and update Warnings UI
+    renderWarnings(deck);
+
+    // Stacking logic: group by oracle_id (or name if oracle_id is missing) and count them
+    // Commander goes into its own group as a special stack of 1
+    const grouped = { Commander: [{ card: deck.commander, count: 1 }] };
 
     deck.cards.forEach(card => {
         const category = categorizeCard(card.type_line);
         if (!grouped[category]) grouped[category] = [];
-        grouped[category].push(card);
+        
+        const key = card.oracle_id || card.name;
+        const existing = grouped[category].find(item => (item.card.oracle_id || item.card.name) === key);
+        if (existing) {
+            existing.count++;
+        } else {
+            grouped[category].push({ card, count: 1 });
+        }
     });
 
     deckListWrapper.innerHTML = "";
@@ -317,9 +317,12 @@ const openDeckDetail = (deckIndex) => {
     order.forEach(category => {
         if (!grouped[category] || grouped[category].length === 0) return;
 
+        // Count category total cards (sum of counts)
+        const totalCatCards = grouped[category].reduce((sum, item) => sum + item.count, 0);
+
         const catDiv = document.createElement("div");
         catDiv.className = "list-category";
-        catDiv.textContent = `${category} (${grouped[category].length})`;
+        catDiv.textContent = `${category} (${totalCatCards})`;
         deckListWrapper.appendChild(catDiv);
 
         const ul = document.createElement("ul");
@@ -328,17 +331,20 @@ const openDeckDetail = (deckIndex) => {
         const gridSection = document.createElement("div");
         gridSection.innerHTML = `
             <h2 class="type-section-header">
-                ${category} <span class="type-section-count">${grouped[category].length}</span>
+                ${category} <span class="type-section-count">${totalCatCards}</span>
             </h2>
             <div class="type-grid"></div>
         `;
         const typeGrid = gridSection.querySelector(".type-grid");
 
-        grouped[category].forEach(card => {
+        grouped[category].forEach(entry => {
+            const card = entry.card;
+            const count = entry.count;
+
             const li = document.createElement("li");
             li.className = "deck-list-item";
             li.innerHTML = `
-                <span class="item-qty">1</span>
+                <span class="item-qty">${count}</span>
                 <span class="item-name">${card.name}</span>
             `;
             li.onclick = () => {
@@ -376,6 +382,49 @@ const openDeckDetail = (deckIndex) => {
             } else {
                 const imgUrl = card.image_uris ? card.image_uris.normal : (card.card_faces ? card.card_faces[0].image_uris.normal : "");
                 cardDiv.innerHTML = `<img src="${imgUrl}" alt="${card.name}">`;
+            }
+
+            // Append stack badge and controls if not commander
+            if (category !== "Commander") {
+                const badge = document.createElement("div");
+                badge.className = `card-stack-badge ${count > 1 ? 'has-multiple' : ''}`;
+                badge.innerHTML = `
+                    <span class="stack-count">${count > 1 ? '×' + count : '×1'}</span>
+                    <div class="stack-controls">
+                        <button class="stack-btn minus-btn" title="Decrease Quantity">&minus;</button>
+                        <button class="stack-btn plus-btn" title="Increase Quantity">&plus;</button>
+                    </div>
+                `;
+
+                badge.onclick = (e) => {
+                    e.stopPropagation();
+                };
+
+                const minusBtn = badge.querySelector(".minus-btn");
+                const plusBtn = badge.querySelector(".plus-btn");
+
+                minusBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    const idx = deck.cards.findIndex(c => (c.oracle_id || c.name) === (card.oracle_id || card.name));
+                    if (idx !== -1) {
+                        deck.cards.splice(idx, 1);
+                        if (window.CardDetailsShared) {
+                            window.CardDetailsShared.saveDecks(decks);
+                        }
+                        openDeckDetail(deckIndex);
+                    }
+                };
+
+                plusBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deck.cards.push(card);
+                    if (window.CardDetailsShared) {
+                        window.CardDetailsShared.saveDecks(decks);
+                    }
+                    openDeckDetail(deckIndex);
+                };
+
+                cardDiv.appendChild(badge);
             }
 
             cardDiv.onclick = () => {
@@ -457,26 +506,56 @@ formCreateDeck.addEventListener("submit", async (e) => {
             cards: []
         };
 
-        for (const mCard of mockCardsToFill) {
-            const mRes = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(mCard)}`);
-            if (mRes.ok) {
-                const mData = await mRes.json();
-                newDeck.cards.push(mData);
-            }
-        }
-
         decks.push(newDeck);
         if (window.CardDetailsShared) {
             window.CardDetailsShared.saveDecks(decks);
         }
         closeModal();
         renderHub();
+        showToast(`Deck "${newDeck.name}" created!`);
     } catch (err) {
         alert("Could not find a card matching that Commander name.");
         createBtn.textContent = "CREATE DECK";
         createBtn.disabled = false;
     }
 });
+
+// Import Deck wiring
+const inputImportFile = document.getElementById("input-import-file");
+
+if (inputImportFile) {
+    inputImportFile.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        try {
+            if (window.CardDetailsShared && window.CardDetailsShared.importDeck) {
+                const imported = await window.CardDetailsShared.importDeck(file);
+                showToast(`Deck "${imported.name}" imported successfully!`);
+                decks = window.CardDetailsShared.loadDecks();
+                renderHub();
+            }
+        } catch (err) {
+            showToast(err, true);
+        } finally {
+            inputImportFile.value = "";
+        }
+    };
+}
+
+// Export Deck wiring
+const btnExportDeck = document.getElementById("btn-export-deck");
+if (btnExportDeck) {
+    btnExportDeck.onclick = () => {
+        if (currentDeckIndex !== -1) {
+            const deck = decks[currentDeckIndex];
+            if (window.CardDetailsShared && window.CardDetailsShared.exportDeck) {
+                window.CardDetailsShared.exportDeck(deck);
+                showToast(`Exported "${deck.name}"!`);
+            }
+        }
+    };
+}
 
 const topbarSearchInput = document.getElementById("topbar-search-input");
 const triggerTopbarSearch = () => {

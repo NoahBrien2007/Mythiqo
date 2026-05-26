@@ -22,17 +22,24 @@
     <div class="view-container">
 
         <div class="view active" id="view-hub">
+            <input type="file" id="input-import-file" accept=".json,.txt" style="display: none;">
             <div class="deck-hub-grid" id="deck-hub-grid"></div>
         </div>
 
         <div class="view" id="view-detail">
             <div class="deck-sidebar">
                 <div class="deck-sidebar-header">
-                    <button class="btn-back" id="btn-back-hub">&#8592;</button>
-                    <div style="display:inline-block; vertical-align: middle;">
-                        <h2 class="detail-deck-name" id="detail-deck-name"></h2>
-                        <p class="detail-commander-name" id="detail-commander-name"></p>
+                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
+                            <button class="btn-back" id="btn-back-hub">&#8592;</button>
+                            <div style="min-width: 0; flex: 1;">
+                                <h2 class="detail-deck-name" id="detail-deck-name" style="margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></h2>
+                                <p class="detail-commander-name" id="detail-commander-name" style="margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></p>
+                            </div>
+                        </div>
+                        <button class="btn btn-export" id="btn-export-deck" style="min-width: auto; height: 32px; padding: 0 12px; font-size: 12px; margin-left: 10px;">EXPORT</button>
                     </div>
+                    <div id="deck-warnings" class="deck-warning-panel"></div>
                 </div>
                 <div class="deck-list-wrapper" id="deck-list-wrapper"></div>
             </div>
