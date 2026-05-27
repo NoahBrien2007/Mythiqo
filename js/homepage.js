@@ -57,7 +57,7 @@ const searchInput = document.getElementById('search-input');
 const triggerSearch = () => {
     const val = searchInput.value.trim();
     if (val) {
-        window.location.href = `search.html?q=${encodeURIComponent(val)}`;
+        window.location.href = `/pages/search.html?q=${encodeURIComponent(val)}`;
     }
 };
 

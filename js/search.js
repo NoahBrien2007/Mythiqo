@@ -284,7 +284,7 @@ const openSidebar = (cardData) => {
             // No decks — prompt user to go create one on the Decks page
             const hint = document.createElement("div");
             hint.style.cssText = "padding: 14px 12px; color: #777; font-size: 12px; line-height: 1.5; text-align: center;";
-            hint.innerHTML = `No decks yet.<br><a href="deck.html" style="color: var(--green2); text-decoration: underline;">Go to the Decks page</a> to create one.`;
+            hint.innerHTML = `No decks yet.<br><a href="/pages/deck.html" style="color: var(--green2); text-decoration: underline;">Go to the Decks page</a> to create one.`;
             sidebarDecksDropdown.appendChild(hint);
         } else {
             const header = document.createElement("div");

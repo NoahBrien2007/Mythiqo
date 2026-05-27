@@ -224,6 +224,27 @@ const showToast = (message, isError = false) => {
     }, 3000);
 };
 
+// Stats state (declared early so openDeckDetail can reference)
+let statsActive = false;
+let savedDeckListHTML = '';
+let currentChartIdx = 0;
+let chartAnimId = null;
+let chartAnimStart = 0;
+
+function exitStatsView() {
+    if (!statsActive) return;
+    statsActive = false;
+    currentChartIdx = 0;
+    const btn = document.getElementById("btn-stats-deck");
+    if (btn) btn.classList.remove('active');
+    const wrapper = document.getElementById('deck-list-wrapper');
+    if (wrapper && savedDeckListHTML) {
+        wrapper.innerHTML = savedDeckListHTML;
+        savedDeckListHTML = '';
+    }
+    if (chartAnimId) { cancelAnimationFrame(chartAnimId); chartAnimId = null; }
+}
+
 // Render Warnings
 const renderWarnings = (deck) => {
     const warningsPanel = document.getElementById("deck-warnings");
@@ -280,6 +301,7 @@ const renderWarnings = (deck) => {
 };
 
 const openDeckDetail = (deckIndex) => {
+    if (statsActive) exitStatsView();
     currentDeckIndex = deckIndex;
     closeSidebar();
     const deck = decks[deckIndex];
@@ -557,11 +579,400 @@ if (btnExportDeck) {
     };
 }
 
+// ======== DECK STATISTICS ========
+const btnStatsDeck = document.getElementById("btn-stats-deck");
+
+const CHART_DEFS = [
+    { id: 'mana-curve', label: 'Mana Curve', donut: false },
+    { id: 'card-types', label: 'Card Types', donut: false },
+    { id: 'color-id', label: 'Color Identity', donut: false },
+    { id: 'mana-pips', label: 'Mana Symbols', donut: false },
+    { id: 'rarity', label: 'Rarity', donut: true },
+    { id: 'legendary', label: 'Legendary', donut: false },
+    { id: 'color-weight', label: 'Color Weight', donut: true },
+    { id: 'type-groups', label: 'Type Groups', donut: false }
+];
+
+const CHART_COLORS = ['#ff6b6b', '#ffd93d', '#6bcbff', '#7aff66', '#ff9ff3', '#ff9f43', '#00d2d3', '#a29bfe', '#f368e0', '#54a0ff'];
+
+function getDeckStats(deck) {
+    if (!deck) return { total: 0, avgCmc: '0', types: {} };
+    const all = [deck.commander, ...deck.cards];
+    const counts = { Creatures: 0, Instants: 0, Sorceries: 0, Artifacts: 0, Enchantments: 0, Planeswalkers: 0, Lands: 0, Other: 0 };
+    let totalCmc = 0;
+    all.forEach(c => {
+        const t = c.type_line.toLowerCase();
+        if (t.includes('creature')) counts.Creatures++;
+        else if (t.includes('instant')) counts.Instants++;
+        else if (t.includes('sorcery')) counts.Sorceries++;
+        else if (t.includes('artifact')) counts.Artifacts++;
+        else if (t.includes('enchantment')) counts.Enchantments++;
+        else if (t.includes('planeswalker')) counts.Planeswalkers++;
+        else if (t.includes('land')) counts.Lands++;
+        else counts.Other++;
+        totalCmc += c.cmc || 0;
+    });
+    return { total: all.length, avgCmc: all.length ? (totalCmc / all.length).toFixed(1) : '0', types: counts };
+}
+
+function computeChartData(deck, idx) {
+    if (!deck) return { labels: [], values: [] };
+    const all = [deck.commander, ...deck.cards];
+    switch (idx) {
+        case 0: {
+            const b = { '0-1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7+': 0 };
+            all.forEach(c => { const v = Math.floor(c.cmc || 0); if (v <= 1) b['0-1']++; else if (v >= 7) b['7+']++; else b[String(v)]++; });
+            return { labels: Object.keys(b), values: Object.values(b) };
+        }
+        case 1: {
+            const t = {};
+            all.forEach(c => { const cat = categorizeCard(c.type_line); t[cat] = (t[cat] || 0) + 1; });
+            const order = ["Creatures", "Planeswalkers", "Instants", "Sorceries", "Artifacts", "Enchantments", "Lands", "Other"];
+            const labels = order.filter(k => t[k]);
+            return { labels, values: labels.map(k => t[k]) };
+        }
+        case 2: {
+            const c = { W: 0, U: 0, B: 0, R: 0, G: 0 };
+            all.forEach(card => (card.colors || card.color_identity || []).forEach(col => { if (col in c) c[col]++; }));
+            return { labels: Object.keys(c), values: Object.values(c) };
+        }
+        case 3: {
+            const p = { W: 0, U: 0, B: 0, R: 0, G: 0 };
+            all.forEach(card => {
+                const m = (card.mana_cost || '').match(/\{[WUBRG]\}/g);
+                if (m) m.forEach(s => { const col = s[1]; if (col in p) p[col]++; });
+            });
+            return { labels: Object.keys(p), values: Object.values(p) };
+        }
+        case 4: {
+            const r = { common: 0, uncommon: 0, rare: 0, mythic: 0, special: 0 };
+            all.forEach(c => { const v = c.rarity || 'common'; if (v in r) r[v]++; });
+            const labels = Object.keys(r).filter(k => r[k] > 0);
+            return { labels, values: labels.map(k => r[k]) };
+        }
+        case 5: {
+            const l = { 'Legendary Creature': 0, 'Legendary Other': 0, 'Non-Legendary': 0 };
+            all.forEach(c => {
+                const t = c.type_line.toLowerCase();
+                const leg = t.includes('legendary');
+                if (!leg) l['Non-Legendary']++;
+                else if (t.includes('creature')) l['Legendary Creature']++;
+                else l['Legendary Other']++;
+            });
+            const labels = Object.keys(l).filter(k => l[k] > 0);
+            return { labels, values: labels.map(k => l[k]) };
+        }
+        case 6: {
+            const w = { 'Colorless': 0, 'Mono-Color': 0, 'Multi-Color': 0 };
+            all.forEach(c => {
+                const cols = c.colors || c.color_identity || [];
+                if (cols.length === 0) w['Colorless']++;
+                else if (cols.length === 1) w['Mono-Color']++;
+                else w['Multi-Color']++;
+            });
+            const labels = Object.keys(w).filter(k => w[k] > 0);
+            return { labels, values: labels.map(k => w[k]) };
+        }
+        case 7: {
+            const g = { 'Lands': 0, 'Creatures': 0, 'Spells': 0, 'Other Perms': 0 };
+            all.forEach(c => {
+                const t = c.type_line.toLowerCase();
+                if (t.includes('land')) g['Lands']++;
+                else if (t.includes('creature')) g['Creatures']++;
+                else if (t.includes('instant') || t.includes('sorcery')) g['Spells']++;
+                else g['Other Perms']++;
+            });
+            const labels = Object.keys(g).filter(k => g[k] > 0);
+            return { labels, values: labels.map(k => g[k]) };
+        }
+    }
+}
+
+function drawLegend(ctx, labels, values, w, xStart, yStart) {
+    const sq = 8;
+    const gap = 12;
+    const maxW = w - xStart - 8;
+    let row = 0;
+    let x = xStart;
+    let lineH = 18;
+
+    labels.forEach((label, i) => {
+        ctx.font = '10px Arial';
+        const tw = ctx.measureText(label).width;
+        const itemW = sq + 4 + tw + gap;
+
+        if (x + itemW > xStart + maxW && x > xStart) {
+            row++;
+            x = xStart;
+        }
+
+        ctx.fillStyle = CHART_COLORS[i % CHART_COLORS.length];
+        ctx.fillRect(x, yStart + row * lineH + 2, sq, sq);
+
+        ctx.fillStyle = '#bbb';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, x + sq + 4, yStart + row * lineH + sq / 2 + 1);
+
+        x += itemW;
+    });
+
+    return (row + 1) * lineH + 4;
+}
+
+function drawChart(ctx, data, progress, w, h, idx) {
+    const { labels, values } = data;
+    if (!labels.length) { ctx.fillStyle = '#666'; ctx.font = '14px Arial'; ctx.textAlign = 'center'; ctx.fillText('No data', w/2, h/2); return; }
+
+    const maxVal = Math.max(...values, 1);
+    const isDonut = CHART_DEFS[idx].donut;
+    const total = values.reduce((a, b) => a + b, 0);
+
+    ctx.clearRect(0, 0, w, h);
+
+    if (isDonut) {
+        if (!total) return;
+        const cx = w/2, cy = h/2 - 12;
+        const outerR = Math.min(w, h) * 0.32;
+        const innerR = outerR * 0.56;
+
+        values.forEach((val, i) => {
+            const slice = (val / total) * Math.PI * 2 * progress;
+            const offset = values.slice(0, i).reduce((a, v) => a + (v / total) * Math.PI * 2, -Math.PI/2);
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, outerR, offset, offset + slice);
+            ctx.arc(cx, cy, innerR, offset + slice, offset, true);
+            ctx.closePath();
+
+            ctx.fillStyle = CHART_COLORS[i % CHART_COLORS.length];
+            ctx.fill();
+        });
+
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, innerR * 0.85, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#7aff66';
+        ctx.font = 'bold 22px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(total, cx, cy - 4);
+        ctx.fillStyle = '#4ade80';
+        ctx.font = '9px Arial';
+        ctx.fillText('cards', cx, cy + 14);
+
+        drawLegend(ctx, labels, values, w, 10, cy + outerR + 16);
+        return;
+    }
+
+    // Bar chart (vertical)
+    const pad = { top: 16, right: 14, bottom: 80, left: 14 };
+    const chartW = w - pad.left - pad.right;
+    const chartH = h - pad.top - pad.bottom;
+    const barW = Math.min(chartW / labels.length * 0.55, 36);
+    const gap = labels.length > 1 ? (chartW - barW * labels.length) / (labels.length + 1) : chartW * 0.3;
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(74,222,128,0.06)';
+    ctx.lineWidth = 1;
+    for (let g = 0; g <= 4; g++) {
+        const gy = pad.top + chartH * (1 - g/4);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, gy);
+        ctx.lineTo(w - pad.right, gy);
+        ctx.stroke();
+    }
+
+    labels.forEach((label, i) => {
+        const x = pad.left + gap + i * (barW + gap);
+        const targetH = ((values[i] / maxVal) * chartH) * progress;
+        const y = pad.top + chartH - targetH;
+
+        ctx.fillStyle = CHART_COLORS[i % CHART_COLORS.length];
+        ctx.shadowColor = CHART_COLORS[i % CHART_COLORS.length];
+        ctx.shadowBlur = 6;
+
+        const r = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + barW - r, y);
+        ctx.quadraticCurveTo(x + barW, y, x + barW, y + r);
+        ctx.lineTo(x + barW, pad.top + chartH);
+        ctx.lineTo(x, pad.top + chartH);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        if (progress > 0.2) {
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(values[i], x + barW/2, y - 3);
+        }
+
+        ctx.fillStyle = '#929292';
+        ctx.font = '9px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(label, x + barW/2, pad.top + chartH + 4);
+    });
+
+    drawLegend(ctx, labels, values, w, 10, pad.top + chartH + 20);
+}
+
+function renderChart(idx, animate = true) {
+    const canvas = document.getElementById('stats-canvas');
+    if (!canvas) return;
+    const deck = decks[currentDeckIndex];
+    if (!deck) return;
+    
+    const wrap = canvas.parentElement;
+    const wrapW = wrap.clientWidth - 4;
+    const wrapH = wrap.clientHeight - 4;
+    const cw = Math.max(200, wrapW);
+    const ch = Math.max(160, Math.min(wrapH, 300));
+    
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = cw * dpr;
+    canvas.height = ch * dpr;
+    canvas.style.width = cw + 'px';
+    canvas.style.height = ch + 'px';
+    
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    
+    const data = computeChartData(deck, idx);
+    
+    if (chartAnimId) { cancelAnimationFrame(chartAnimId); chartAnimId = null; }
+    
+    if (!animate) {
+        drawChart(ctx, data, 1, cw, ch, idx);
+        return;
+    }
+    
+    chartAnimStart = performance.now();
+    const duration = 700;
+    
+    function frame(time) {
+        const t = Math.min((time - chartAnimStart) / duration, 1);
+        const ease = 1 - Math.pow(1 - t, 3);
+        
+        const ctx2 = canvas.getContext('2d');
+        ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
+        drawChart(ctx2, data, ease, cw, ch, idx);
+        
+        if (t < 1) { chartAnimId = requestAnimationFrame(frame); }
+        else { chartAnimId = null; }
+    }
+    chartAnimId = requestAnimationFrame(frame);
+}
+
+function renderStatsPanel() {
+    const wrapper = document.getElementById('deck-list-wrapper');
+    if (!wrapper) return;
+    const deck = decks[currentDeckIndex];
+    if (!deck) return;
+    
+    savedDeckListHTML = wrapper.innerHTML;
+    wrapper.innerHTML = '';
+    
+    const panel = document.createElement('div');
+    panel.className = 'stats-panel';
+    
+    const stats = getDeckStats(deck);
+    
+    panel.innerHTML = `
+        <div class="stats-header">
+            <button class="btn-stats-back" id="btn-stats-back">&larr; List</button>
+            <select class="stats-dropdown" id="stats-dropdown">
+                ${CHART_DEFS.map((c, i) => `<option value="${i}" ${i === currentChartIdx ? 'selected' : ''}>${c.label}</option>`).join('')}
+            </select>
+        </div>
+        <div class="stats-chart-wrap">
+            <canvas id="stats-canvas"></canvas>
+        </div>
+        <div class="stats-chart-indicators" id="stats-indicators">
+            ${CHART_DEFS.map((c, i) => `<div class="stats-indicator ${i === currentChartIdx ? 'active' : ''}" data-idx="${i}"></div>`).join('')}
+        </div>
+        <div class="stats-summary">
+            <div class="stats-summary-item">
+                <span class="stats-summary-value">${stats.total}</span>
+                <span class="stats-summary-label">Total Cards</span>
+            </div>
+            <div class="stats-summary-item">
+                <span class="stats-summary-value">${stats.avgCmc}</span>
+                <span class="stats-summary-label">Avg CMC</span>
+            </div>
+            <div class="stats-summary-item">
+                <span class="stats-summary-value">${stats.types.Creatures}</span>
+                <span class="stats-summary-label">Creatures</span>
+            </div>
+            <div class="stats-summary-item">
+                <span class="stats-summary-value">${stats.types.Lands}</span>
+                <span class="stats-summary-label">Lands</span>
+            </div>
+        </div>
+    `;
+    
+    wrapper.appendChild(panel);
+    statsActive = true;
+    btnStatsDeck.classList.add('active');
+    
+    // Wire dropdown
+    const dropdown = document.getElementById('stats-dropdown');
+    if (dropdown) {
+        dropdown.addEventListener('change', () => {
+            currentChartIdx = parseInt(dropdown.value, 10);
+            updateIndicators(currentChartIdx);
+            renderChart(currentChartIdx, true);
+        });
+    }
+    
+    // Wire indicators
+    document.querySelectorAll('.stats-indicator').forEach(el => {
+        el.addEventListener('click', () => {
+            currentChartIdx = parseInt(el.dataset.idx, 10);
+            dropdown.value = currentChartIdx;
+            updateIndicators(currentChartIdx);
+            renderChart(currentChartIdx, true);
+        });
+    });
+    
+    // Wire back
+    const backBtn = document.getElementById('btn-stats-back');
+    if (backBtn) backBtn.addEventListener('click', exitStatsView);
+    
+    // Render initial chart
+    requestAnimationFrame(() => renderChart(currentChartIdx, true));
+}
+
+function updateIndicators(idx) {
+    document.querySelectorAll('.stats-indicator').forEach(el => {
+        el.classList.toggle('active', parseInt(el.dataset.idx, 10) === idx);
+    });
+}
+
+// Wire stats button
+if (btnStatsDeck) {
+    btnStatsDeck.onclick = () => {
+        if (statsActive) {
+            exitStatsView();
+        } else {
+            renderStatsPanel();
+        }
+    };
+}
+
 const topbarSearchInput = document.getElementById("topbar-search-input");
 const triggerTopbarSearch = () => {
     const val = topbarSearchInput.value.trim();
     if (val) {
-        window.location.href = `search.html?q=${encodeURIComponent(val)}`;
+        window.location.href = `/pages/search.html?q=${encodeURIComponent(val)}`;
     }
 };
 topbarSearchInput.addEventListener("keydown", (e) => {

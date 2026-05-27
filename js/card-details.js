@@ -45,7 +45,7 @@ const saveDecks = (decks) => {
 
 // Create empty deck with card as commander
 const createDeckFromCard = (deckName, commanderCard) => {
-    const decks = loadDecks();
+    const decks = window.CardDetailsShared.loadDecks();
     const newDeck = {
         id: Date.now(),
         name: deckName || "New Deck",
@@ -55,7 +55,7 @@ const createDeckFromCard = (deckName, commanderCard) => {
         cards: []
     };
     decks.push(newDeck);
-    saveDecks(decks);
+    window.CardDetailsShared.saveDecks(decks);
     return newDeck;
 };
 
@@ -531,7 +531,7 @@ const showContextMenu = (e, cardData, options = {}) => {
     const deckId = options.deckId || null;
     const onUpdate = options.onUpdate || null;
 
-    let decks = loadDecks();
+    let decks = window.CardDetailsShared.loadDecks();
 
     let deckSubmenuHTML = "";
     if (decks.length === 0) {
@@ -611,13 +611,13 @@ const showContextMenu = (e, cardData, options = {}) => {
     if (inDeck) {
         globalContextMenu.querySelector("#ctx-remove-deck").onclick = () => {
             globalContextMenu.style.display = "none";
-            const decks = loadDecks();
+            const decks = window.CardDetailsShared.loadDecks();
             const deck = decks.find(d => d.id == deckId);
             if (deck) {
                 const index = deck.cards.findIndex(c => c.id === cardData.id);
                 if (index !== -1) {
                     deck.cards.splice(index, 1);
-                    saveDecks(decks);
+                    window.CardDetailsShared.saveDecks(decks);
                     if (onUpdate) onUpdate();
                 }
             }
@@ -629,11 +629,11 @@ const showContextMenu = (e, cardData, options = {}) => {
         item.onclick = () => {
             globalContextMenu.style.display = "none";
             const targetDeckId = item.getAttribute("data-deck-id");
-            const decks = loadDecks();
+            const decks = window.CardDetailsShared.loadDecks();
             const deck = decks.find(d => d.id == targetDeckId);
             if (deck) {
                 deck.cards.push(cardData);
-                saveDecks(decks);
+                window.CardDetailsShared.saveDecks(decks);
                 alert(`Added ${cardData.name} to ${deck.name}!`);
                 if (onUpdate) onUpdate();
             }
@@ -711,14 +711,14 @@ const importDeck = (file) => {
                         reject("Invalid deck file - missing required fields.");
                         return;
                     }
-                    const decks = loadDecks();
+                    const decks = window.CardDetailsShared.loadDecks();
                     const existing = decks.findIndex(d => d.id === deck.id);
                     if (existing !== -1) {
                         decks[existing] = deck;
                     } else {
                         decks.push(deck);
                     }
-                    saveDecks(decks);
+                    window.CardDetailsShared.saveDecks(decks);
                     resolve(deck);
                     return;
                 }
@@ -825,9 +825,9 @@ const importDeck = (file) => {
                     cards: deckCards
                 };
                 
-                const decks = loadDecks();
+                const decks = window.CardDetailsShared.loadDecks();
                 decks.push(newDeck);
-                saveDecks(decks);
+                window.CardDetailsShared.saveDecks(decks);
                 resolve(newDeck);
                 
             } catch (e) {
