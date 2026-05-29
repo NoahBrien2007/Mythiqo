@@ -598,12 +598,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             import random
 
             if atype == 'draw':
-                if not pl['library']:
-                    return send_error(self, 'Library empty.')
-                card = pl['library'].pop()
-                pl['hand'].append(card)
-                gs['log'].append(f'{username} draws a card.')
-                result = {'card': card}
+                cnt = action.get('count', 1)
+                drawn = 0
+                for _ in range(cnt):
+                    if not pl['library']:
+                        break
+                    pl['hand'].append(pl['library'].pop())
+                    drawn += 1
+                if drawn:
+                    gs['log'].append(f'{username} draws {drawn} card(s).')
+                result = {}
 
             elif atype == 'mill':
                 cnt = action.get('count', 1)
@@ -613,29 +617,108 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         break
                     milled.append(pl['library'].pop())
                 pl['graveyard'].extend(milled)
-                gs['log'].append(f'{username} mills {len(milled)} card(s).')
+                if milled:
+                    gs['log'].append(f'{username} mills {len(milled)} card(s).')
                 result = {'cards': milled}
 
             elif atype == 'scry':
-                if not pl['library']:
-                    return send_error(self, 'Library empty.')
-                top = pl['library'].pop()
-                put_bottom = action.get('bottom', False)
-                if put_bottom:
-                    pl['library'].insert(0, top)
+                if pl['library']:
+                    top = pl['library'].pop()
+                    put_bottom = action.get('bottom', False)
+                    if put_bottom:
+                        pl['library'].insert(0, top)
+                    else:
+                        pl['library'].append(top)
+                    gs['log'].append(f'{username} scries 1.')
+                    result = {'card': top}
                 else:
-                    pl['library'].append(top)
-                gs['log'].append(f'{username} scries 1.')
-                result = {'card': top}
+                    result = {}
 
             elif atype == 'search':
-                if not pl['library']:
-                    return send_error(self, 'Library empty.')
-                idx = random.randint(0, len(pl['library']) - 1)
-                card = pl['library'].pop(idx)
-                pl['hand'].append(card)
-                gs['log'].append(f'{username} searches their library.')
-                result = {'card': card}
+                if pl['library']:
+                    idx = random.randint(0, len(pl['library']) - 1)
+                    card = pl['library'].pop(idx)
+                    pl['hand'].append(card)
+                    gs['log'].append(f'{username} searches their library.')
+                    result = {'card': card}
+                else:
+                    result = {}
+
+            elif atype == 'shuffle':
+                random.shuffle(pl['library'])
+                gs['log'].append(f'{username} shuffles their library.')
+                result = {}
+
+            elif atype == 'topToBottom':
+                if pl['library']:
+                    c = pl['library'].pop()
+                    pl['library'].insert(0, c)
+                    gs['log'].append(f'{username} puts top card on bottom.')
+                result = {}
+
+            elif atype == 'bottomToTop':
+                if pl['library']:
+                    c = pl['library'].pop(0)
+                    pl['library'].append(c)
+                    gs['log'].append(f'{username} puts bottom card on top.')
+                result = {}
+
+            elif atype == 'handToTop':
+                hi = action.get('handIdx', -1)
+                if 0 <= hi < len(pl['hand']):
+                    c = pl['hand'].pop(hi)
+                    pl['library'].append(c)
+                    gs['log'].append(f'{username} puts a card from hand on top of library.')
+                result = {}
+
+            elif atype == 'handToBottom':
+                hi = action.get('handIdx', -1)
+                if 0 <= hi < len(pl['hand']):
+                    c = pl['hand'].pop(hi)
+                    pl['library'].insert(0, c)
+                    gs['log'].append(f'{username} puts a card from hand on bottom of library.')
+                result = {}
+
+            elif atype == 'exileTop':
+                if pl['library']:
+                    c = pl['library'].pop()
+                    pl['exile'].append(c)
+                    gs['log'].append(f'{username} exiles top card of library.')
+                result = {}
+
+            elif atype == 'exileFromHand':
+                hi = action.get('handIdx', -1)
+                if 0 <= hi < len(pl['hand']):
+                    c = pl['hand'].pop(hi)
+                    pl['exile'].append(c)
+                    gs['log'].append(f'{username} exiles a card from hand.')
+                result = {}
+
+            elif atype == 'returnFromGY':
+                ci = action.get('cardIdx', -1)
+                n = ''
+                if 0 <= ci < len(pl['graveyard']):
+                    c = pl['graveyard'].pop(ci)
+                    n = c.get('name', 'a card')
+                    pl['hand'].append(c)
+                gs['log'].append(f'{username} returns {n or "a card"} from graveyard to hand.')
+                result = {}
+
+            elif atype == 'returnFromExile':
+                ci = action.get('cardIdx', -1)
+                n = ''
+                if 0 <= ci < len(pl['exile']):
+                    c = pl['exile'].pop(ci)
+                    n = c.get('name', 'a card')
+                    pl['hand'].append(c)
+                gs['log'].append(f'{username} returns {n or "a card"} from exile to hand.')
+                result = {}
+
+            elif atype == 'lifeSet':
+                val = action.get('value', 20)
+                pl['life'] = max(0, val)
+                gs['log'].append(f'{username} sets life to {pl["life"]}.')
+                result = {}
 
             elif atype == 'play':
                 hand_idx = action.get('handIdx', -1)
@@ -797,13 +880,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     gs['log'].append(f'{username} flips {bf[card_idx].get("name", "card")}.')
                 result = {}
 
-            elif atype == 'nextTurn':
-                if pi != gs['activePlayer']:
-                    return send_error(self, 'Not your turn.')
-                gs['turn'] += 1
-                gs['activePlayer'] = (gs['activePlayer'] + 1) % len(gs['players'])
-                ap = gs['players'][gs['activePlayer']]['name']
-                gs['log'].append(f'--- Turn {gs["turn"] + 1}: {ap}\'s turn ---')
+            elif atype == 'addCounter':
+                target_player = action.get('targetPlayer', pi)
+                card_idx = action.get('cardIdx', 0)
+                cname = action.get('counterName', 'generic')
+                amt = action.get('amount', 1)
+                tp = gs['players'][target_player]
+                bf = tp.get('battlefield', [])
+                if 0 <= card_idx < len(bf):
+                    card_obj = bf[card_idx]
+                    if 'counters' not in card_obj:
+                        card_obj['counters'] = {}
+                    card_obj['counters'][cname] = card_obj['counters'].get(cname, 0) + amt
+                    gs['log'].append(f'{username} adds {amt} {cname} counter(s) on {card_obj.get("name", "card")}.')
                 result = {}
 
             else:

@@ -150,7 +150,6 @@
             <div class="play-action-list" id="play-action-list"></div>
             <div class="play-sidebar-bottom">
                 <button class="btn play-token-btn" id="play-token-btn">TOKEN</button>
-                <button class="btn play-next-turn-btn" id="play-next-turn-btn">NEXT TURN</button>
             </div>
         </div>
         <div class="play-main-area" id="play-main-area">
@@ -186,23 +185,45 @@
 
     <!-- Token Popup -->
     <div class="play-overlay hidden" id="play-token-overlay">
-        <div class="play-overlay-panel">
+        <div class="play-overlay-panel token-panel">
             <div class="play-overlay-header">Create Token</div>
-            <input type="text" class="text-input" id="token-search" placeholder="Search Scryfall (e.g. \"Spirit\", \"Treasure\") and press Enter">
-            <div class="token-list" id="token-list"></div>
-            <div class="token-form-row">
-                <div class="token-form-group">
+            <input type="text" id="token-search" placeholder="Search Scryfall (e.g. Spirit, Treasure) and press Enter">
+            <div class="token-grid" id="token-list"></div>
+            <div class="token-bar">
+                <div class="token-bar-group">
                     <label>Count</label>
-                    <input type="number" class="text-input" id="token-count" value="1" min="1">
+                    <input type="number" class="token-input" id="token-count" value="1" min="1">
                 </div>
-                <div class="token-form-group">
-                    <label>Target Player</label>
-                    <select class="text-input" id="token-target"></select>
+                <div class="token-bar-group">
+                    <label>Player</label>
+                    <div class="custom-select token-custom-select" id="token-target-select">
+                        <button class="select-btn">You</button>
+                        <div class="select-menu" id="token-target-menu"></div>
+                    </div>
                 </div>
-            </div>
-            <div class="token-actions">
                 <button class="play-btn-start" id="token-create-btn">CREATE</button>
                 <button class="btn" id="token-cancel-btn">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Counter Popup -->
+    <div class="play-overlay hidden" id="play-counter-overlay">
+        <div class="play-overlay-panel" style="width:320px">
+            <div class="play-overlay-header">Add Counter</div>
+            <div style="display:flex;flex-direction:column;gap:10px;padding:10px 0">
+                <div style="display:flex;flex-direction:column;gap:4px">
+                    <label style="color:var(--green3);font-size:11px;text-transform:uppercase;font-weight:bold">Counter Name</label>
+                    <input type="text" id="counter-name" placeholder="e.g. +1/+1, Loyalty" style="width:100%;height:38px;padding:0 10px;background:var(--black);border:2px solid var(--green3);color:#fff;font-size:13px;font-family:inherit;box-sizing:border-box;outline:none">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                    <label style="color:var(--green3);font-size:11px;text-transform:uppercase;font-weight:bold">Amount</label>
+                    <input type="number" id="counter-amount" value="1" min="1" style="width:80px;height:38px;padding:0 10px;background:var(--black);border:2px solid var(--green3);color:#fff;font-size:13px;font-family:inherit;box-sizing:border-box;outline:none">
+                </div>
+                <div style="display:flex;gap:10px;margin-top:4px">
+                    <button class="play-btn-start" id="counter-apply-btn" style="margin-top:0">APPLY</button>
+                    <button class="btn" id="counter-cancel-btn">CANCEL</button>
+                </div>
             </div>
         </div>
     </div>

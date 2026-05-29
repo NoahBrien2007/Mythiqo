@@ -23,7 +23,7 @@
     const tokenList = document.getElementById('token-list');
     const tokenSearch = document.getElementById('token-search');
     const tokenCount = document.getElementById('token-count');
-    const tokenTarget = document.getElementById('token-target');
+    const counterOverlay = document.getElementById('play-counter-overlay');
     const endBtn = document.getElementById('play-end-btn');
 
     // ─── State ──────────────────────────────────────────────────────────────
@@ -37,6 +37,7 @@
     let lifePopupEl = null;
     let dragData = null;
     let selectedToken = null;
+    let currentCmdIdx = 0;
     let primaryIdx = -1;
     let manaPool = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
 
@@ -83,6 +84,7 @@
         }
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Request failed');
+        if (data.success === false) throw new Error(data.error || 'Action failed');
         return data;
     }
 
@@ -782,12 +784,21 @@
                 const r = b.getBoundingClientRect();
                 const posX = Math.max(0, Math.min(e.clientX - r.left - 41, r.width - 82));
                 const posY = Math.max(0, Math.min(e.clientY - r.top - 57, r.height - 115));
-                const { fromPlayer, fromZone, cardIdx, card } = dragData;
+                const { fromPlayer, fromZone, card } = dragData;
                 dragData = null;
 
                 if (fromPlayer !== myIdx && (fromZone === 'hand' || fromZone === 'library')) return;
 
-                doAction({ type: 'moveCard', card, from: fromZone, fromIdx: cardIdx, fromPlayer, to: 'battlefield', toPlayer: primaryIdx, posX, posY });
+                // Resolve current index at drop time (stale-proof)
+                const srcPl = gameState && gameState.players && gameState.players[fromPlayer];
+                const zoneArr = srcPl && srcPl[fromZone];
+                const fromIdx = zoneArr ? zoneArr.findIndex(c => c === card || (c.name && card.name && c.name === card.name)) : -1;
+                if (fromIdx < 0) {
+                    console.log('board drop: card not found in', fromZone, card && card.name);
+                    return;
+                }
+
+                doAction({ type: 'moveCard', card, from: fromZone, fromIdx, fromPlayer, to: 'battlefield', toPlayer: primaryIdx, posX, posY });
             });
         }
 
@@ -868,18 +879,78 @@
         const zoneGrid = document.createElement('div');
         zoneGrid.className = 'play-zone-grid';
 
-        // CMD zone
+        // CMD zone (draggable commander, right-click to rotate)
         const cmdCell = document.createElement('div');
         cmdCell.className = 'zone-cell zone-cmd';
         const cmdCards = primary.commandZone || [];
-        if (cmdCards.length && cmdCards[0].image_uris) {
-            const cmdImg = cmdCards[0].image_uris && cmdCards[0].image_uris.normal ? cmdCards[0].image_uris.normal
-                : (cmdCards[0].card_faces && cmdCards[0].card_faces[0].image_uris && cmdCards[0].card_faces[0].image_uris.normal ? cmdCards[0].card_faces[0].image_uris.normal : '');
-            if (cmdImg) cmdCell.innerHTML = '<img src="' + cmdImg + '" alt="Commander">';
+        // Clamp index in case commanders were removed
+        if (currentCmdIdx >= cmdCards.length) currentCmdIdx = 0;
+        const shownCmd = cmdCards[currentCmdIdx];
+        if (shownCmd && shownCmd.image_uris) {
+            const cmdImg = shownCmd.image_uris && shownCmd.image_uris.normal ? shownCmd.image_uris.normal
+                : (shownCmd.card_faces && shownCmd.card_faces[0].image_uris && shownCmd.card_faces[0].image_uris.normal ? shownCmd.card_faces[0].image_uris.normal : '');
+            if (cmdImg) {
+                const wrap = document.createElement('div');
+                wrap.draggable = true;
+                wrap.innerHTML = '<img src="' + cmdImg + '" alt="' + (shownCmd.name || 'Commander') + '" draggable="false">';
+                wrap.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', 'cmd');
+                    e.dataTransfer.setDragImage(EMPTY_DRAG_IMG, 0, 0);
+                    dragData = { fromPlayer: primaryIdx, fromZone: 'commandZone', cardIdx: currentCmdIdx, card: shownCmd };
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+                cmdCell.appendChild(wrap);
+            }
         }
-        if (!cmdCell.innerHTML) cmdCell.textContent = 'CMD';
+        if (!cmdCell.children.length) cmdCell.textContent = 'CMD';
         cmdCell.innerHTML += '<div class="zone-count">' + cmdCards.length + '</div>';
-        cmdCell.addEventListener('click', () => showZoneDetail(primaryIdx, 'commandZone', 'Command Zone'));
+        cmdCell.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (cardMenuEl) cardMenuEl.remove();
+            cardMenuEl = document.createElement('div');
+            cardMenuEl.className = 'card-context-menu';
+            cardMenuEl.style.left = Math.min(e.clientX + 10, window.innerWidth - 160) + 'px';
+            cardMenuEl.style.top = e.clientY + 'px';
+
+            // Cast Commander
+            const castBtn = document.createElement('button');
+            castBtn.className = 'card-context-option';
+            castBtn.textContent = 'Cast Commander';
+            castBtn.addEventListener('click', async () => {
+                cardMenuEl.remove();
+                cardMenuEl = null;
+                await doAction({ type: 'castCmd' });
+            });
+            cardMenuEl.appendChild(castBtn);
+
+            // Rotate to each commander if multiple
+            if (cmdCards.length > 1) {
+                cmdCards.forEach((c, i) => {
+                    const opt = document.createElement('button');
+                    opt.className = 'card-context-option';
+                    opt.textContent = (i === currentCmdIdx ? '▸ ' : '   ') + (c.name || 'Commander ' + (i + 1));
+                    opt.addEventListener('click', () => {
+                        cardMenuEl.remove();
+                        cardMenuEl = null;
+                        currentCmdIdx = i;
+                        renderBoard();
+                    });
+                    cardMenuEl.appendChild(opt);
+                });
+            }
+
+            document.body.appendChild(cardMenuEl);
+            setTimeout(() => {
+                const close = (ev) => {
+                    if (cardMenuEl && !cardMenuEl.contains(ev.target)) {
+                        cardMenuEl.remove();
+                        cardMenuEl = null;
+                        document.removeEventListener('click', close);
+                    }
+                };
+                document.addEventListener('click', close);
+            }, 10);
+        });
         cmdCell.addEventListener('dragover', (e) => e.preventDefault());
         cmdCell.addEventListener('drop', (e) => { e.preventDefault(); handleDrop(e, primaryIdx, 'commandZone'); });
         zoneGrid.appendChild(cmdCell);
@@ -1025,17 +1096,45 @@
             }
             handCards.appendChild(cardEl);
         });
+        if (!handArea._dropInited) {
+            handArea._dropInited = true;
+            handArea.addEventListener('dragover', (e) => e.preventDefault());
+            handArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (!dragData) return;
+                const { fromPlayer, fromZone, cardIdx, card } = dragData;
+                if (fromPlayer !== myIdx) return;
+                handleDrop(e, myIdx, 'hand');
+            });
+        }
     }
 
     // ─── Action Sidebar ────────────────────────────────────────────────────
-    const ACTION_DEFS = [
-        { id: 'draw', label: 'Draw', needs: 'library' },
-        { id: 'mill1', label: 'Mill 1', needs: 'library', action: 'mill', count: 1 },
-        { id: 'mill5', label: 'Mill 5', needs: 'library', action: 'mill', count: 5 },
-        { id: 'mill10', label: 'Mill 10', needs: 'library', action: 'mill', count: 10 },
-        { id: 'scry', label: 'Scry', needs: 'library' },
-        { id: 'search', label: 'Search', needs: 'library' },
-        { id: 'nextTurn', label: 'Next Turn' },
+    const ACTION_GROUPS = [
+        {
+            label: 'Library',
+            items: [
+                { id: 'draw', label: 'Draw 1' },
+                { id: 'draw7', label: 'Draw 7', action: 'draw', count: 7 },
+                { id: 'mill1', label: 'Mill 1', action: 'mill', count: 1 },
+                { id: 'mill5', label: 'Mill 5', action: 'mill', count: 5 },
+                { id: 'mill10', label: 'Mill 10', action: 'mill', count: 10 },
+                { id: 'scry', label: 'Scry' },
+                { id: 'search', label: 'Search' },
+                { id: 'shuffle', label: 'Shuffle' },
+                { id: 'topToBottom', label: 'Top→Bottom' },
+                { id: 'bottomToTop', label: 'Bottom→Top' },
+                { id: 'exileTop', label: 'Exile Top' },
+            ]
+        },
+        {
+            label: 'Life',
+            items: [
+                { id: 'lifeSet20', label: 'Life 20', action: 'lifeSet', value: 20 },
+                { id: 'lifeSet40', label: 'Life 40', action: 'lifeSet', value: 40 },
+                { id: 'lifeSet10', label: 'Life 10', action: 'lifeSet', value: 10 },
+            ]
+        },
     ];
 
     function renderActions() {
@@ -1043,20 +1142,26 @@
         actionList.innerHTML = '';
         if (!gameState || myIdx < 0) return;
         const me = gameState.players[myIdx];
-        ACTION_DEFS.forEach(def => {
-            if (q && !def.label.toLowerCase().includes(q)) return;
-            const item = document.createElement('div');
-            item.className = 'play-action-item';
-            const disabled = def.needs === 'library' && (!me.library || me.library.length === 0);
-            if (disabled) item.style.opacity = '0.35';
-            item.innerHTML = '<span>' + def.label + '</span>';
-            item.addEventListener('click', async () => {
-                if (disabled) return;
-                const action = { type: def.action || def.id };
-                if (def.count) action.count = def.count;
-                await doAction(action);
+        if (!me) return;
+        ACTION_GROUPS.forEach(group => {
+            const matches = group.items.filter(def => !q || def.label.toLowerCase().includes(q) || group.label.toLowerCase().includes(q));
+            if (!matches.length) return;
+            const header = document.createElement('div');
+            header.className = 'play-action-group';
+            header.textContent = group.label;
+            actionList.appendChild(header);
+            matches.forEach(def => {
+                const item = document.createElement('div');
+                item.className = 'play-action-item';
+                item.innerHTML = '<span>' + def.label + '</span>';
+                item.addEventListener('click', async () => {
+                    const action = { type: def.action || def.id };
+                    if (def.count != null) action.count = def.count;
+                    if (def.value != null) action.value = def.value;
+                    await doAction(action);
+                });
+                actionList.appendChild(item);
             });
-            actionList.appendChild(item);
         });
     }
 
@@ -1075,13 +1180,14 @@
                 }
                 gameState = result.state;
                 renderEverything();
+            } else {
+                console.log('doAction: no state returned for', action.type, result);
             }
         } catch (e) {
             alert('Action failed: ' + e.message);
         }
     }
 
-    document.getElementById('play-next-turn-btn').addEventListener('click', () => doAction({ type: 'nextTurn' }));
     document.getElementById('play-token-btn').addEventListener('click', showTokenPopup);
 
     // ─── Token Popup (Scryfall search) ─────────────────────────────────────
@@ -1092,16 +1198,29 @@
         selectedToken = null;
         document.getElementById('token-create-btn').disabled = true;
         tokenSearch.value = '';
-        tokenList.innerHTML = '<div class="token-search-hint">Type a token name and press Enter to search Scryfall</div>';
+        tokenList.innerHTML = '<div class="hint">Search Scryfall above</div>';
         tokenSearchResults = [];
-        tokenTarget.innerHTML = '';
+        // Populate custom select for player target
+        const menu = document.getElementById('token-target-menu');
+        const btn = document.querySelector('#token-target-select .select-btn');
+        menu.innerHTML = '';
         if (gameState && gameState.players) {
             gameState.players.forEach((p, i) => {
-                const opt = document.createElement('option');
-                opt.value = i;
+                const opt = document.createElement('div');
+                opt.className = 'select-option';
                 opt.textContent = p.name;
-                tokenTarget.appendChild(opt);
+                opt.dataset.idx = i;
+                opt.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    btn.firstChild.textContent = p.name;
+                    btn.dataset.idx = i;
+                    menu.classList.remove('active');
+                    btn.classList.remove('active');
+                });
+                menu.appendChild(opt);
             });
+            btn.firstChild.textContent = gameState.players[0].name;
+            btn.dataset.idx = 0;
         }
         tokenOverlay.classList.remove('hidden');
         setTimeout(() => tokenSearch.focus(), 100);
@@ -1112,15 +1231,15 @@
             const q = tokenSearch.value.trim();
             if (!q || tokenLoading) return;
             tokenLoading = true;
-            tokenList.innerHTML = '<div class="token-search-hint">Searching...</div>';
+            tokenList.innerHTML = '<div class="hint">Searching...</div>';
             try {
-                const url = 'https://api.scryfall.com/cards/search?q=' + encodeURIComponent('t:' + q + ' (game:paper)');
+                const url = 'https://api.scryfall.com/cards/search?q=' + encodeURIComponent('t:' + q + ' is:token (game:paper)');
                 const resp = await fetch(url);
                 const data = await resp.json();
                 tokenSearchResults = data.data || [];
                 renderTokenSearchResults();
             } catch {
-                tokenList.innerHTML = '<div class="token-search-hint">Search failed. Try again.</div>';
+                tokenList.innerHTML = '<div class="hint">Search failed. Try again.</div>';
             }
             tokenLoading = false;
         }
@@ -1129,19 +1248,20 @@
     function renderTokenSearchResults() {
         tokenList.innerHTML = '';
         if (!tokenSearchResults.length) {
-            tokenList.innerHTML = '<div class="token-search-hint">No results found.</div>';
+            tokenList.innerHTML = '<div class="hint">No results found.</div>';
             return;
         }
         tokenSearchResults.slice(0, 50).forEach(card => {
             const name = card.name || 'Unknown';
-            const img = card.image_uris && card.image_uris.small ? card.image_uris.small
-                : (card.card_faces && card.card_faces[0].image_uris && card.card_faces[0].image_uris.small ? card.card_faces[0].image_uris.small : '');
-            const el = document.createElement('div');
-            el.className = 'token-option' + (selectedToken && selectedToken.name === name ? ' selected' : '');
-            if (img) el.innerHTML = '<img src="' + img + '" class="token-result-img">';
-            el.innerHTML += '<span>' + name + '</span>';
+            const img = card.image_uris && card.image_uris.normal ? card.image_uris.normal
+                : (card.card_faces && card.card_faces[0].image_uris && card.card_faces[0].image_uris.normal ? card.card_faces[0].image_uris.normal : '');
+            if (!img) return;
+            const el = document.createElement('img');
+            el.className = 'token-result-img' + (selectedToken && selectedToken.name === name ? ' selected' : '');
+            el.src = img;
+            el.title = name;
             el.addEventListener('click', () => {
-                document.querySelectorAll('.token-option').forEach(o => o.classList.remove('selected'));
+                document.querySelectorAll('.token-result-img').forEach(o => o.classList.remove('selected'));
                 el.classList.add('selected');
                 selectedToken = card;
                 document.getElementById('token-create-btn').disabled = false;
@@ -1153,7 +1273,8 @@
     document.getElementById('token-create-btn').addEventListener('click', async () => {
         if (!selectedToken) return;
         const count = parseInt(tokenCount.value, 10) || 1;
-        const target = parseInt(tokenTarget.value, 10);
+        const btn = document.querySelector('#token-target-select .select-btn');
+        const target = parseInt(btn ? btn.dataset.idx : 0, 10);
         const tokenData = {
             name: selectedToken.name || 'Token',
             image_uris: selectedToken.image_uris,
@@ -1171,6 +1292,38 @@
 
     document.getElementById('token-cancel-btn').addEventListener('click', () => {
         tokenOverlay.classList.add('hidden');
+    });
+
+    // ─── Counter Popup ──────────────────────────────────────────────────────
+    let pendingCounterTarget = null;
+    function showCounterPopup(card, playerIdx, cardIdx) {
+        pendingCounterTarget = { card, playerIdx, cardIdx };
+        document.getElementById('counter-name').value = '';
+        document.getElementById('counter-amount').value = '1';
+        counterOverlay.classList.remove('hidden');
+        setTimeout(() => document.getElementById('counter-name').focus(), 100);
+    }
+
+    document.getElementById('counter-apply-btn').addEventListener('click', async () => {
+        if (!pendingCounterTarget) return;
+        const { playerIdx, cardIdx } = pendingCounterTarget;
+        const counterName = document.getElementById('counter-name').value.trim() || 'generic';
+        const amount = parseInt(document.getElementById('counter-amount').value, 10) || 1;
+        pendingCounterTarget = null;
+        counterOverlay.classList.add('hidden');
+        await doAction({ type: 'addCounter', targetPlayer: playerIdx, cardIdx, counterName, amount });
+    });
+
+    document.getElementById('counter-cancel-btn').addEventListener('click', () => {
+        pendingCounterTarget = null;
+        counterOverlay.classList.add('hidden');
+    });
+
+    counterOverlay.addEventListener('click', (e) => {
+        if (e.target === counterOverlay) {
+            pendingCounterTarget = null;
+            counterOverlay.classList.add('hidden');
+        }
     });
 
     // ─── Life Popup ─────────────────────────────────────────────────────────
@@ -1250,17 +1403,22 @@
     // ─── Drag and Drop ──────────────────────────────────────────────────────
     function handleDrop(e, toPlayer, toZone) {
         if (!dragData) return;
-        const { fromPlayer, fromZone, cardIdx, card } = dragData;
+        const { fromPlayer, fromZone, card } = dragData;
         dragData = null;
 
-        // Can't drag opponent's hand/library
         if (fromPlayer !== myIdx && (fromZone === 'hand' || fromZone === 'library')) return;
-        // Can't put in opponent's hand
-        if (toZone === 'hand' && toPlayer !== fromPlayer && toPlayer !== myIdx) return;
-        // If dragging to opponent's hand and moving from your zone - only you can move to your hand
         if (toZone === 'hand' && toPlayer !== myIdx) return;
 
-        doAction({ type: 'moveCard', card, from: fromZone, fromIdx: cardIdx, fromPlayer, to: toZone, toPlayer });
+        // Resolve current index at drop time (stale-proof)
+        const srcPl = gameState && gameState.players && gameState.players[fromPlayer];
+        const zoneArr = srcPl && srcPl[fromZone];
+        const fromIdx = zoneArr ? zoneArr.findIndex(c => c === card || (c.name && card.name && c.name === card.name)) : -1;
+        if (fromIdx < 0) {
+            console.log('handleDrop: card not found in', fromZone, card.name);
+            return;
+        }
+
+        doAction({ type: 'moveCard', card, from: fromZone, fromIdx, fromPlayer, to: toZone, toPlayer });
     }
 
     // ─── Card Actions Menu ─────────────────────────────────────────────────
@@ -1302,6 +1460,8 @@
             }
             actions.push({ label: 'Exile', action: { type: 'moveCard', card, from: 'battlefield', fromIdx: cardIdx, fromPlayer: playerIdx, to: 'exile', toPlayer: playerIdx } });
             actions.push({ label: 'Destroy', action: { type: 'moveCard', card, from: 'battlefield', fromIdx: cardIdx, fromPlayer: playerIdx, to: 'graveyard', toPlayer: playerIdx } });
+            // Add Counter with popup
+            actions.push({ label: 'Add Counter...', popup: true });
         }
 
         if (!actions.length) { cardMenuEl = null; return; }
@@ -1314,7 +1474,11 @@
                 e2.stopPropagation();
                 cardMenuEl.remove();
                 cardMenuEl = null;
-                await doAction(a.action);
+                if (a.popup) {
+                    showCounterPopup(card, playerIdx, cardIdx);
+                } else {
+                    await doAction(a.action);
+                }
             });
             cardMenuEl.appendChild(btn);
         });
