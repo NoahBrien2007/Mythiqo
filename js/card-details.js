@@ -215,7 +215,7 @@ const createFlipCardHTML = (cardData, isFlippedByDefault = false) => {
     }
 
     // Back face
-    let backImgUrl = "https://svgs.scryfall.io/card-back.svg";
+    let backImgUrl = "https://gamepedia.cursecdn.com/mtgsalvation_gamepedia/f/f8/Magic_card_back.jpg";
     if (hasFaces && cardData.card_faces[1].image_uris && cardData.card_faces[1].image_uris.normal) {
         backImgUrl = cardData.card_faces[1].image_uris.normal;
     }
@@ -811,7 +811,7 @@ const importDeck = (file) => {
                             name: name,
                             type_line: "Unknown Type",
                             oracle_text: "Details not loaded.",
-                            image_uris: { normal: "https://svgs.scryfall.io/card-back.svg" }
+                            image_uris: { normal: "https://gamepedia.cursecdn.com/mtgsalvation_gamepedia/f/f8/Magic_card_back.jpg" }
                         });
                     }
                 });

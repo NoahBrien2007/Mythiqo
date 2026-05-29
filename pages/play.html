@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Play</title>
+    <link rel="stylesheet" href="../css/deck.css">
+    <link rel="stylesheet" href="../css/play.css">
+    <link rel="stylesheet" href="../css/auth.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mana-font@latest/css/mana.css">
+</head>
+<body>
+    <div class="topbar">
+        <div class="search-box">
+            <div class="search-icon" id="topbar-search-trigger"></div>
+            <input type="text" id="topbar-search-input" class="text-input" placeholder="Search...">
+        </div>
+        <button class="btn" onclick="window.location.href='/pages/search.html'">FILTERS</button>
+        <button class="btn" onclick="window.location.href='/pages/deck.html'">DECKS</button>
+        <button class="btn active">PLAY</button>
+        <button class="btn play-end-btn-topbar" id="play-end-btn" style="border-color:#ff6b6b;color:#ff6b6b;min-width:80px;">END</button>
+    </div>
+
+    <!-- Lobby Screen -->
+    <div class="play-setup" id="play-lobby">
+        <div class="play-setup-inner">
+            <h1 class="play-title">Play</h1>
+            <div class="play-lobby-btns">
+                <button class="btn play-lobby-btn" id="lobby-host-btn">HOST MATCH</button>
+                <button class="btn play-lobby-btn" id="lobby-join-btn">JOIN MATCH</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Match Screen -->
+    <div class="play-setup hidden" id="play-host">
+        <div class="play-setup-inner">
+            <h1 class="play-title">Host Match</h1>
+            <button class="play-back-btn" id="host-back-btn">&larr; Back</button>
+
+            <div class="play-form-group">
+                <label>Format</label>
+                <div class="custom-select" id="select-host-format">
+                    <button class="select-btn">Commander</button>
+                    <div class="select-menu">
+                        <div class="select-option">Commander</div>
+                        <div class="select-option">Standard</div>
+                        <div class="select-option">Modern</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="play-form-group">
+                <label>Opponents</label>
+                <div class="play-toggle-row">
+                    <button class="btn play-toggle-btn active" id="host-opp-bots">Bots</button>
+                    <button class="btn play-toggle-btn" id="host-opp-players">Players</button>
+                </div>
+            </div>
+
+            <div id="host-bot-section">
+                <div class="play-form-group">
+                    <label>Number of Players</label>
+                    <div class="custom-select" id="select-host-players">
+                        <button class="select-btn">4 Players</button>
+                        <div class="select-menu">
+                            <div class="select-option">2 Players</div>
+                            <div class="select-option">3 Players</div>
+                            <div class="select-option">4 Players</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="play-form-group" id="host-bot-names">
+                    <label>Bot Names</label>
+                    <input type="text" class="text-input" id="host-bot1" value="Bot Alpha" placeholder="Bot 1 name...">
+                    <input type="text" class="text-input" id="host-bot2" value="Bot Beta" placeholder="Bot 2 name...">
+                    <input type="text" class="text-input" id="host-bot3" value="Bot Gamma" placeholder="Bot 3 name...">
+                </div>
+            </div>
+
+            <div id="host-player-section" class="hidden">
+                <div class="play-form-group">
+                    <label>Match Name</label>
+                    <input type="text" class="text-input" id="host-match-name" placeholder="My Awesome Game">
+                </div>
+                <div class="play-form-group">
+                    <label>Max Players</label>
+                    <div class="custom-select" id="select-host-max">
+                        <button class="select-btn">4 Players</button>
+                        <div class="select-menu">
+                            <div class="select-option">2 Players</div>
+                            <div class="select-option">3 Players</div>
+                            <div class="select-option">4 Players</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="play-form-group">
+                    <label>Password (optional)</label>
+                    <input type="text" class="text-input" id="host-password" placeholder="Leave blank for no password">
+                </div>
+            </div>
+
+            <button class="play-btn-start" id="host-create-btn">CREATE MATCH</button>
+        </div>
+    </div>
+
+    <!-- Join Match Screen -->
+    <div class="play-setup hidden" id="play-join">
+        <div class="play-setup-inner">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+                <h1 class="play-title" style="margin:0;">Join Match</h1>
+                <button class="btn" id="join-refresh-btn" style="padding:6px 12px;font-size:11px;">REFRESH</button>
+            </div>
+            <button class="play-back-btn" id="join-back-btn">&larr; Back</button>
+            <div id="join-match-list"></div>
+            <div id="join-empty" class="play-empty">No matches available.</div>
+        </div>
+    </div>
+
+    <!-- Waiting Room -->
+    <div class="play-setup hidden" id="play-waiting">
+        <div class="play-setup-inner">
+            <h1 class="play-title" id="waiting-title">Waiting Room</h1>
+            <div id="waiting-match-info"></div>
+            <div class="waiting-players" id="waiting-players"></div>
+            <button class="play-btn-start hidden" id="waiting-start-btn">START MATCH</button>
+            <button class="play-btn-end" id="waiting-leave-btn" style="margin-top:10px;">LEAVE MATCH</button>
+        </div>
+    </div>
+
+    <!-- Join Password Prompt -->
+    <div class="play-setup hidden" id="play-password-prompt">
+        <div class="play-setup-inner" style="max-width:340px;">
+            <h1 class="play-title">Password Required</h1>
+            <div class="play-form-group">
+                <label>Password for <span id="pw-match-name"></span></label>
+                <input type="text" class="text-input" id="pw-input" placeholder="Enter password">
+            </div>
+            <div class="play-toggle-row" style="justify-content:center;gap:10px;">
+                <button class="btn" id="pw-cancel-btn">Cancel</button>
+                <button class="play-btn-start" id="pw-join-btn" style="margin:0;">Join</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Match Board Screen -->
+    <div class="play-match" id="play-match">
+        <div class="play-action-sidebar" id="play-action-sidebar">
+            <input type="text" class="action-search" id="action-search" placeholder="Search actions...">
+            <div class="play-action-list" id="play-action-list"></div>
+            <div class="play-sidebar-bottom">
+                <button class="btn play-token-btn" id="play-token-btn">TOKEN</button>
+                <button class="btn play-next-turn-btn" id="play-next-turn-btn">NEXT TURN</button>
+            </div>
+        </div>
+        <div class="play-main-area" id="play-main-area">
+            <div class="play-board-row" id="play-board-row">
+                <div class="play-board" id="play-board"></div>
+                <div class="play-right-col" id="play-right-col"></div>
+            </div>
+            <div class="play-hand-area" id="play-hand-area">
+                <div class="play-hand-header" id="play-hand-header">Your Hand</div>
+                <div class="play-hand-cards" id="play-hand-cards"></div>
+            </div>
+        </div>
+        <div class="play-chat" id="play-chat">
+            <div class="play-chat-header">Game Log</div>
+            <div class="play-chat-messages" id="play-chat-messages"></div>
+        </div>
+
+        <!-- Deck Select Overlay -->
+        <div class="play-deck-overlay" id="play-deck-overlay">
+            <div class="play-overlay-panel">
+                <div class="play-overlay-header">Select Your Deck</div>
+                <div class="play-form-group">
+                    <label>Deck</label>
+                    <div class="custom-select" id="select-game-deck">
+                        <button class="select-btn">-- Select your deck --</button>
+                        <div class="select-menu"></div>
+                    </div>
+                </div>
+                <button class="play-btn-start" id="deck-confirm-btn">CONFIRM DECK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Token Popup -->
+    <div class="play-overlay hidden" id="play-token-overlay">
+        <div class="play-overlay-panel">
+            <div class="play-overlay-header">Create Token</div>
+            <input type="text" class="text-input" id="token-search" placeholder="Search Scryfall (e.g. \"Spirit\", \"Treasure\") and press Enter">
+            <div class="token-list" id="token-list"></div>
+            <div class="token-form-row">
+                <div class="token-form-group">
+                    <label>Count</label>
+                    <input type="number" class="text-input" id="token-count" value="1" min="1">
+                </div>
+                <div class="token-form-group">
+                    <label>Target Player</label>
+                    <select class="text-input" id="token-target"></select>
+                </div>
+            </div>
+            <div class="token-actions">
+                <button class="play-btn-start" id="token-create-btn">CREATE</button>
+                <button class="btn" id="token-cancel-btn">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zone Detail Overlay -->
+    <div class="zone-detail-overlay hidden" id="zone-detail-overlay">
+        <div class="zone-detail-panel">
+            <div class="zone-detail-header">
+                <span id="zone-detail-title"></span>
+                <button class="zone-detail-close" id="zone-detail-close">&times;</button>
+            </div>
+            <div class="zone-detail-list" id="zone-detail-list"></div>
+        </div>
+    </div>
+
+    <script src="../js/card-details.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/play.js"></script>
+</body>
+</html>

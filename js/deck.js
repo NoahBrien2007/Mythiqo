@@ -968,6 +968,13 @@ if (btnStatsDeck) {
     };
 }
 
+// Re-render hub after auth.js syncs decks from server
+window.addEventListener('auth:decks-synced', () => {
+    decks = window.CardDetailsShared.loadDecks();
+    // Only re-render if we're on the hub view
+    if (viewHub && viewHub.classList.contains('active')) renderHub();
+});
+
 const topbarSearchInput = document.getElementById("topbar-search-input");
 const triggerTopbarSearch = () => {
     const val = topbarSearchInput.value.trim();

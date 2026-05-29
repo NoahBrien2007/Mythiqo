@@ -59,6 +59,7 @@
             if (data.decks && data.decks.length) {
                 localStorage.setItem('mythiqo_decks', JSON.stringify(data.decks));
             }
+            window.dispatchEvent(new CustomEvent('auth:decks-synced', { detail: data.decks || [] }));
             return data.decks || [];
         } catch { return null; }
     }
